@@ -35,6 +35,7 @@ export class CoachingEngine {
   private topsonItemsAdvised: Set<string> = new Set();
   private lhCheckpointsHit: Set<number> = new Set(); // track which LH checkpoints (600, 1200, 1800) fired
   private startingItemsAdvised: boolean = false;
+  private lastItemAdviceClockTime: number = -999;
 
   constructor(voice: VoiceOutput, config: ConfigManager) {
     this.voice = voice;
@@ -55,6 +56,7 @@ export class CoachingEngine {
     this.topsonItemsAdvised.clear();
     this.lhCheckpointsHit.clear();
     this.startingItemsAdvised = false;
+    this.lastItemAdviceClockTime = -999;
 
     const heroName = HERO_NAMES[heroId] || 'your hero';
     const cfg = this.config.get();
@@ -305,6 +307,12 @@ export class CoachingEngine {
     if (!profile || profile.itemTimings.length === 0) return recs;
 
     const t = snap.clockTime;
+
+    // Prevent spamming item recommendations too close together (at least 150 seconds apart)
+    if (this.lastItemAdviceClockTime !== -999 && t - this.lastItemAdviceClockTime < 150) {
+      return recs;
+    }
+
     const playerGold = snap.player.gold;
     const playerItems = new Set(snap.items.map(i => i.itemName.toLowerCase()));
 
@@ -338,6 +346,7 @@ export class CoachingEngine {
         const topsonMins = Math.floor(timing.medianTime / 60);
         const topsonSecs = Math.floor(timing.medianTime % 60);
         this.topsonItemsAdvised.add(adviceKey);
+        this.lastItemAdviceClockTime = t;
 
         recs.push({
           priority: 'medium',
@@ -356,6 +365,7 @@ export class CoachingEngine {
         );
         // We can't check exact cost from GSI, but we can note the timing window
         this.topsonItemsAdvised.add(adviceKey);
+        this.lastItemAdviceClockTime = t;
 
         recs.push({
           priority: 'high',

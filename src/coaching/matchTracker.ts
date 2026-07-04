@@ -286,11 +286,13 @@ export class MatchTracker extends EventEmitter {
       items,
       abilities,
       buildings,
-      stratzContext: this.stratzContext || {
-        topsonProfile: null,
-        userRecentMatches: 0,
-        userWinRate: null,
-      },
+      stratzContext: (this.stratzContext && this.stratzContext.topsonProfile?.heroId === hero.heroId)
+        ? this.stratzContext
+        : {
+            topsonProfile: null,
+            userRecentMatches: 0,
+            userWinRate: null,
+          },
     };
   }
 }
