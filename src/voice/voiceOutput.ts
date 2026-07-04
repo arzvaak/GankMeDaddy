@@ -146,7 +146,12 @@ export class VoiceOutput {
   private stopActivePlayback(): void {
     if (this.activeProcess) {
       try {
-        this.activeProcess.kill();
+        if (process.platform === 'win32') {
+          // Forcefully and recursively kill the process tree to stop PowerShell SoundPlayer instantly
+          exec(`taskkill /f /t /pid ${this.activeProcess.pid}`);
+        } else {
+          this.activeProcess.kill();
+        }
       } catch (e) {}
       this.activeProcess = null;
     }

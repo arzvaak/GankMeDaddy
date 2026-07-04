@@ -147,10 +147,8 @@ export class TopsonAnalyzer {
             startingItemCounts.set(purchase.itemId, (startingItemCounts.get(purchase.itemId) || 0) + 1);
           }
 
-          // Skip consumables and wards (items under ~200 gold) to focus on core items
-          const itemInfo = this.stratz.getItemCache().get(purchase.itemId);
-          const cost = itemInfo?.cost || 0;
-          if (cost < 200 && purchase.itemId !== 0) continue;
+          // Focus exclusively on major finished core items
+          if (purchase.itemId !== 0 && !this.isFinishedCoreItem(purchase.itemId)) continue;
 
           if (!itemPurchasesByItem.has(purchase.itemId)) {
             itemPurchasesByItem.set(purchase.itemId, []);
@@ -255,5 +253,87 @@ export class TopsonAnalyzer {
       .filter(it => it.purchaseRate >= 0.3)
       .slice(0, 10) // Top 10 most consistent items
       .map(it => it.itemId);
+  }
+
+  /**
+   * Determine if an item is a finished core item (skipping recipes and raw components).
+   */
+  private isFinishedCoreItem(itemId: number): boolean {
+    const itemInfo = this.stratz.getItemCache().get(itemId);
+    if (!itemInfo) return false;
+
+    const name = itemInfo.name.toLowerCase();
+    const cost = itemInfo.cost;
+
+    // 1. Skip recipes
+    if (name.includes('recipe')) return false;
+
+    // 2. Allowed minor finished items
+    const allowedMinorItems = [
+      'bottle',
+      'magic_wand',
+      'boots',
+      'power_treads',
+      'phase_boots',
+      'arcane_boots',
+      'tranquil_boots',
+      'ultimate_scepter_2',
+      'aghanims_shard'
+    ];
+    if (allowedMinorItems.some(i => name.includes(i))) {
+      return true;
+    }
+
+    // 3. Exclude raw components
+    const rawComponents = [
+      'belt_of_strength',
+      'boots_of_elves',
+      'robe',
+      'staff_of_wizardry',
+      'ogre_axe',
+      'blade_of_alacrity',
+      'point_booster',
+      'vitality_booster',
+      'energy_booster',
+      'void_stone',
+      'ring_of_health',
+      'tiara_of_intelligence',
+      'diadem',
+      'broadsword',
+      'blades_of_attack',
+      'chainmail',
+      'helm_of_iron_will',
+      'javelin',
+      'mithril_hammer',
+      'claymore',
+      'quarterstaff',
+      'gloves',
+      'blitz_knuckles',
+      'fluffy_hat',
+      'crown',
+      'shadow_amulet',
+      'ring_of_regen',
+      'sobi_mask',
+      'lifesteal',
+      'magic_stick',
+      'wind_lace',
+      'circlet',
+      'branches',
+      'gauntlets',
+      'slippers',
+      'mantle'
+    ];
+    if (rawComponents.some(comp => name.includes(comp))) {
+      return false;
+    }
+
+    // 4. Exclude early game cheap stat items (Bracer, Wraith Band, Null Talisman)
+    const cheapStatItems = ['bracer', 'wraith_band', 'null_talisman'];
+    if (cheapStatItems.some(item => name.includes(item))) {
+      return false;
+    }
+
+    // 5. Must cost at least 1700 gold to be considered a major core item
+    return cost >= 1700;
   }
 }
