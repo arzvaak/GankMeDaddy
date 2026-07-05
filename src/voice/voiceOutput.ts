@@ -48,6 +48,7 @@ export class VoiceOutput {
     if (!enabled) {
       this.queue = [];
       this.stopActivePlayback();
+      this.speaking = false;
     }
   }
 
