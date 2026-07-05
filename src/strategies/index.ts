@@ -12,6 +12,7 @@ import { stormSpiritStrategy } from './stormSpiritStrategy';
 import { monkeyKingStrategy } from './monkeyKingStrategy';
 import { queenOfPainStrategy } from './queenOfPainStrategy';
 import { zeusStrategy } from './zeusStrategy';
+import { kezStrategy } from './kezStrategy';
 
 /**
  * Registry of all hero-specific strategy modules.
@@ -30,5 +31,6 @@ strategyRegistry.set(HERO_IDS.STORM_SPIRIT, stormSpiritStrategy);
 strategyRegistry.set(HERO_IDS.MONKEY_KING, monkeyKingStrategy);
 strategyRegistry.set(HERO_IDS.QUEEN_OF_PAIN, queenOfPainStrategy);
 strategyRegistry.set(HERO_IDS.ZEUS, zeusStrategy);
+strategyRegistry.set(HERO_IDS.KEZ, kezStrategy);
 
 console.log(`[STRATEGIES] Registered ${strategyRegistry.size} hero strategies`);

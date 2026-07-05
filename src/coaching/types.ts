@@ -14,6 +14,7 @@ export const HERO_IDS = {
   MONKEY_KING: 114,
   QUEEN_OF_PAIN: 39,
   ZEUS: 22,
+  KEZ: 145,
 } as const;
 
 export const HERO_NAMES: Record<number, string> = {
@@ -25,6 +26,7 @@ export const HERO_NAMES: Record<number, string> = {
   [HERO_IDS.MONKEY_KING]: 'Monkey King',
   [HERO_IDS.QUEEN_OF_PAIN]: 'Queen of Pain',
   [HERO_IDS.ZEUS]: 'Zeus',
+  [HERO_IDS.KEZ]: 'Kez',
 };
 
 export const SUPPORTED_HERO_IDS = Object.values(HERO_IDS) as number[];
@@ -142,6 +144,12 @@ export interface StratzContext {
   userWinRate: number | null;
 }
 
+export interface MatchupDraft {
+  radiantHeroIds: number[];
+  direHeroIds: number[];
+  myHeroId: number;
+}
+
 export interface MatchSnapshot {
   /** Game time in seconds (includes pre-horn time, can be negative) */
   gameTime: number;
@@ -163,6 +171,8 @@ export interface MatchSnapshot {
   buildings: BuildingSnapshot[];
   /** Pre-fetched STRATZ context for the current hero */
   stratzContext: StratzContext;
+  /** Manually configured draft matchup from dashboard */
+  matchup?: MatchupDraft | null;
 }
 
 // ---------------------------------------------------------------------------

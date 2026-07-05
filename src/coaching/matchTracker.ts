@@ -94,6 +94,17 @@ export class MatchTracker extends EventEmitter {
       }
     });
 
+    this.gsi.on('matchupUpdated', async (draft) => {
+      if (draft.myHeroId && draft.myHeroId !== this.currentHeroId) {
+        this.currentHeroId = draft.myHeroId;
+        this.inMatch = true;
+        console.log(`[TRACKER] Matchup updated. Selected Hero ID: ${this.currentHeroId}`);
+        await this.loadStratzContext(this.currentHeroId);
+        this.emit('heroDetected', this.currentHeroId);
+        this.emit('matchStart', this.currentHeroId);
+      }
+    });
+
     this.gsi.on('matchEnd', (_state: GameState) => {
       console.log('[TRACKER] Match ended.');
       this.inMatch = false;
@@ -104,7 +115,8 @@ export class MatchTracker extends EventEmitter {
     });
 
     this.gsi.on('gameStateUpdate', (state: GameState) => {
-      if (!state.map || state.map.game_state !== 'DOTA_GAMERULES_STATE_GAME_IN_PROGRESS') {
+      const gs = state.map?.game_state;
+      if (!state.map || (gs !== 'DOTA_GAMERULES_STATE_GAME_IN_PROGRESS' && gs !== 'DOTA_GAMERULES_STATE_PRE_GAME')) {
         return;
       }
 
@@ -293,6 +305,7 @@ export class MatchTracker extends EventEmitter {
             userRecentMatches: 0,
             userWinRate: null,
           },
+      matchup: this.gsi.getMatchup(),
     };
   }
 }

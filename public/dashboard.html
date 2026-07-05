@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GankMeDaddy — Live Matchup Coach</title>
+  <!-- Google Fonts: Outfit & Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;600;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="dashboard.css">
+</head>
+<body>
+  <div class="stars-bg"></div>
+  <div class="dashboard-container">
+    <!-- Header -->
+    <header class="glass-header">
+      <div class="logo">
+        <span class="logo-main">GankMeDaddy</span>
+        <span class="logo-sub">Live Mid Coach</span>
+      </div>
+      <div class="connection-status" id="connectionStatus">
+        <span class="status-dot disconnected"></span>
+        <span class="status-text">DISCONNECTED</span>
+      </div>
+    </header>
+
+    <main class="main-content">
+      <!-- Sidebar / Draft Setup -->
+      <section class="draft-sidebar glass-panel">
+        <h2 class="panel-title">Draft Matchup</h2>
+        <p class="panel-desc">Configure teams and select your active hero to receive counter briefings and real-time coaching.</p>
+
+        <!-- Active Hero Slot -->
+        <div class="slot-group active-hero-group">
+          <label>Active Hero</label>
+          <div class="active-hero-display" id="activeHeroDisplay" onclick="clearActiveHero()">
+            <div class="placeholder-text">Click a hero in the grid to select</div>
+          </div>
+        </div>
+
+        <!-- Radiant Team -->
+        <div class="slot-group radiant-group">
+          <label class="team-label radiant">Radiant Team (Allies)</label>
+          <div class="team-slots" id="radiantSlots">
+            <!-- 5 slots -->
+            <div class="slot empty" data-team="radiant" data-index="0" onclick="handleSlotClick('radiant', 0)">Empty</div>
+            <div class="slot empty" data-team="radiant" data-index="1" onclick="handleSlotClick('radiant', 1)">Empty</div>
+            <div class="slot empty" data-team="radiant" data-index="2" onclick="handleSlotClick('radiant', 2)">Empty</div>
+            <div class="slot empty" data-team="radiant" data-index="3" onclick="handleSlotClick('radiant', 3)">Empty</div>
+            <div class="slot empty" data-team="radiant" data-index="4" onclick="handleSlotClick('radiant', 4)">Empty</div>
+          </div>
+        </div>
+
+        <!-- Dire Team -->
+        <div class="slot-group dire-group">
+          <label class="team-label dire">Dire Team (Enemies)</label>
+          <div class="team-slots" id="direSlots">
+            <!-- 5 slots -->
+            <div class="slot empty" data-team="dire" data-index="0" onclick="handleSlotClick('dire', 0)">Empty</div>
+            <div class="slot empty" data-team="dire" data-index="1" onclick="handleSlotClick('dire', 1)">Empty</div>
+            <div class="slot empty" data-team="dire" data-index="2" onclick="handleSlotClick('dire', 2)">Empty</div>
+            <div class="slot empty" data-team="dire" data-index="3" onclick="handleSlotClick('dire', 3)">Empty</div>
+            <div class="slot empty" data-team="dire" data-index="4" onclick="handleSlotClick('dire', 4)">Empty</div>
+          </div>
+        </div>
+
+        <!-- Action Sync Button -->
+        <button class="btn-sync" id="syncBtn" onclick="syncMatchup()">
+          <span class="btn-glow"></span>
+          Sync Matchup to Coach
+        </button>
+      </section>
+
+      <!-- Main Grid of Heroes -->
+      <section class="heroes-section glass-panel">
+        <!-- Grid Filters / Header -->
+        <div class="grid-header">
+          <h2 class="panel-title">Select Heroes</h2>
+          <div class="search-bar">
+            <input type="text" id="heroSearch" placeholder="Search hero name..." oninput="filterHeroes()">
+          </div>
+        </div>
+
+        <!-- Attribute Sections -->
+        <div class="attr-groups">
+          <!-- Strength -->
+          <div class="attr-group-container">
+            <h3 class="attr-title str-title"><span class="attr-icon str"></span> Strength</h3>
+            <div class="hero-grid" id="strGrid"></div>
+          </div>
+
+          <!-- Agility -->
+          <div class="attr-group-container">
+            <h3 class="attr-title agi-title"><span class="attr-icon agi"></span> Agility</h3>
+            <div class="hero-grid" id="agiGrid"></div>
+          </div>
+
+          <!-- Intelligence -->
+          <div class="attr-group-container">
+            <h3 class="attr-title int-title"><span class="attr-icon int"></span> Intelligence</h3>
+            <div class="hero-grid" id="intGrid"></div>
+          </div>
+
+          <!-- Universal -->
+          <div class="attr-group-container">
+            <h3 class="attr-title uni-title"><span class="attr-icon uni"></span> Universal</h3>
+            <div class="hero-grid" id="uniGrid"></div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- Hero Options Modal / Dropdown -->
+  <div class="modal-overlay" id="optionsModal" onclick="closeModal()">
+    <div class="modal-card glass-modal" onclick="event.stopPropagation()">
+      <h3 id="modalHeroName">Hero Options</h3>
+      <div class="modal-buttons">
+        <button class="modal-btn btn-active" onclick="assignSelectedHero('active')">Set as My Hero</button>
+        <button class="modal-btn btn-radiant" onclick="assignSelectedHero('radiant')">Add to Radiant</button>
+        <button class="modal-btn btn-dire" onclick="assignSelectedHero('dire')">Add to Dire</button>
+        <button class="modal-btn btn-close" onclick="closeModal()">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Slot Options Modal -->
+  <div class="modal-overlay" id="slotModal" onclick="closeSlotModal()">
+    <div class="modal-card glass-modal" onclick="event.stopPropagation()">
+      <h3 id="slotHeroName">Slot Hero Options</h3>
+      <div class="modal-buttons">
+        <button class="modal-btn btn-active" onclick="assignActiveFromSlot()">Set as My Hero</button>
+        <button class="modal-btn btn-dire" onclick="removeHeroFromSlot()">Remove from Team</button>
+        <button class="modal-btn btn-close" onclick="closeSlotModal()">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="dashboard.js"></script>
+</body>
+</html>

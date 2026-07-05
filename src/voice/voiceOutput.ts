@@ -145,15 +145,16 @@ export class VoiceOutput {
 
   private stopActivePlayback(): void {
     if (this.activeProcess) {
+      const proc = this.activeProcess;
+      this.activeProcess = null; // Clear activeProcess before killing it to indicate intentional interruption
       try {
         if (process.platform === 'win32') {
           // Forcefully and recursively kill the process tree to stop PowerShell SoundPlayer instantly
-          exec(`taskkill /f /t /pid ${this.activeProcess.pid}`);
+          exec(`taskkill /f /t /pid ${proc.pid}`);
         } else {
-          this.activeProcess.kill();
+          proc.kill();
         }
       } catch (e) {}
-      this.activeProcess = null;
     }
   }
 
@@ -210,6 +211,12 @@ export class VoiceOutput {
       piper.stdin.end();
 
       piper.on('close', (code) => {
+        // If this.activeProcess is no longer the piper child process, it was intentionally terminated.
+        if (this.activeProcess !== piper) {
+          try { fs.unlinkSync(tempWav); } catch (e) {}
+          return; // Do NOT trigger fallback speech or execute callback
+        }
+
         if (code !== 0) {
           console.error(`[VOICE] Piper process exited with code ${code}`);
           try { fs.unlinkSync(tempWav); } catch (e) {}
@@ -220,12 +227,15 @@ export class VoiceOutput {
 
         // 2. Play the generated WAV file via SoundPlayer
         const player = exec(`powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -Command "$player = New-Object System.Media.SoundPlayer '${tempWav}'; $player.PlaySync()"`, (err) => {
+          const wasInterrupted = this.activeProcess !== player;
           if (this.activeProcess === player) {
             this.activeProcess = null;
           }
           // Cleanup WAV
           try { fs.unlinkSync(tempWav); } catch (e) {}
-          callback();
+          if (!wasInterrupted) {
+            callback();
+          }
         });
 
         this.activeProcess = player;
@@ -295,11 +305,14 @@ $player.PlaySync()
       const escapedText = text.replace(/"/g, '\\"');
 
       const proc = exec(`powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "${tempPsFile}" "${escapedText}"`, (err) => {
+        const wasInterrupted = this.activeProcess !== proc;
         if (this.activeProcess === proc) {
           this.activeProcess = null;
         }
         try { fs.unlinkSync(tempPsFile); } catch (e) {}
-        callback();
+        if (!wasInterrupted) {
+          callback();
+        }
       });
       this.activeProcess = proc;
     } catch (err) {

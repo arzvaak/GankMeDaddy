@@ -15,6 +15,8 @@ const CONFIG_DIR = path.join(
 const CONFIG_FILE = path.join(CONFIG_DIR, 'config.json');
 
 export interface AppConfig {
+  /** Config schema version for migration */
+  configVersion?: number;
   /** User's Steam account ID */
   steamAccountId: number;
   /** Hero IDs that are enabled for coaching */
@@ -34,6 +36,7 @@ export interface AppConfig {
 }
 
 const DEFAULT_CONFIG: AppConfig = {
+  configVersion: 2,
   steamAccountId: 82744607,
   enabledHeroIds: [...SUPPORTED_HERO_IDS],
   aggressionLevel: 10,
@@ -110,7 +113,18 @@ export class ConfigManager {
         const raw = fs.readFileSync(CONFIG_FILE, 'utf-8');
         const parsed = JSON.parse(raw);
         // Merge with defaults to handle new fields added in updates
-        return { ...DEFAULT_CONFIG, ...parsed };
+        const loaded = { ...DEFAULT_CONFIG, ...parsed };
+        
+        // Handle migration from older config versions lacking Kez (ID 145)
+        if (!parsed.configVersion || parsed.configVersion < 2) {
+          if (!loaded.enabledHeroIds.includes(145)) {
+            loaded.enabledHeroIds.push(145);
+          }
+          loaded.configVersion = 2;
+          this.config = loaded;
+          this.save();
+        }
+        return loaded;
       }
     } catch (err) {
       console.warn('[CONFIG] Failed to load config, using defaults:', (err as Error).message);

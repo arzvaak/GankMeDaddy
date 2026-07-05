@@ -7,8 +7,8 @@ import * as dotenv from 'dotenv';
 import * as fs from 'fs';
 import * as path from 'path';
 
-// Load environment variables FIRST
-dotenv.config();
+// Load environment variables FIRST using absolute path relative to index file
+dotenv.config({ path: path.join(__dirname, '..', '.env') });
 
 const STRATZ_API_TOKEN: string = process.env.STRATZ_API_TOKEN!;
 if (!STRATZ_API_TOKEN) {
@@ -139,7 +139,10 @@ async function main() {
   tracker.on('heroDetected', (heroId: number) => {
     const heroName = HERO_NAMES[heroId] || `Hero ${heroId}`;
     tray.updateStatus(`Hero: ${heroName}`);
-    voice.speakNow(`${heroName} detected. Loading Topson data.`);
+    const cfg = config.get();
+    if (cfg.enabledHeroIds.includes(heroId)) {
+      voice.speakNow(`${heroName} detected. Loading Topson data.`);
+    }
   });
 
   // -------------------------------------------------------------------------
