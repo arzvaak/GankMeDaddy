@@ -1,17 +1,20 @@
 # 🎮 GankMeDaddy — Dota 2 Live Mid Coaching Agent
 
-A lightweight Windows 11 tray app that provides **real-time voice coaching** for mid lane play, using **Topson's actual match data** from STRATZ as benchmarks.
+A lightweight Windows 11 system tray and web dashboard application that provides **real-time voice coaching** for mid lane play, using **Topson's actual match data** from STRATZ as benchmarks.
 
 ## Features
 
-- 🎯 **Real-time voice coaching** via Windows SAPI (local, offline, zero latency)
-- 📊 **Data-driven benchmarks** from Topson's actual STRATZ match history (item timings, GPM, KDA)
-- 🎮 **Dota 2 Game State Integration** for live game data (HP, mana, gold, items, abilities)
-- 🏆 **8 mid heroes** with dedicated strategy modules (easily extensible)
-- ⏱️ **Rune/Lotus/Shrine timers** with voice reminders
-- 📈 **Creep score checkpoints** at 10/20/30 min vs Topson's pace
-- 🔊 **Priority-based TTS queue** with cooldown deduplication (no spam)
-- 🖥️ **Lightweight system tray** — no Electron, no browser, minimal resources
+- 🎯 **Real-time voice coaching** via offline high-quality neural Piper TTS with standard OneCore Speech fallback.
+- 🖥️ **Web Matchup Dashboard** — High-end glassmorphism UI (`http://localhost:3001/dashboard.html`) to manually select drafts and select your hero.
+- 📊 **Data-driven benchmarks** from Topson's actual STRATZ match history (item timings, GPM, KDA).
+- 🎮 **Dota 2 Game State Integration** for live game telemetry (HP, mana, gold, items, abilities).
+- 🏆 **9 mid heroes** with dedicated, robust strategy modules.
+- 🔀 **Dynamic Build-Path Branching** — Automatically detects physical/magical item trajectories and filters advice dynamically.
+- 🛡️ **Enemy Counter Briefings** — Pre-game analysis and counter tips for dangerous opponent heroes.
+- ⏱️ **Rune/Lotus/Shrine timers** with voice reminders.
+- 📈 **Creep score checkpoints** at 10/20/30 min vs Topson's pace.
+- 🔊 **Priority-based TTS queue** with interrupt protection and cooldown deduplication.
+- ⚙️ **Lightweight System Tray** — Toggle hero pools, voice switch, setup GSI, or launch dashboard instantly.
 
 ## Supported Heroes
 
@@ -25,6 +28,7 @@ A lightweight Windows 11 tray app that provides **real-time voice coaching** for
 | Monkey King | 114 | Jingu trading, tree positioning, Wukong's Command |
 | Queen of Pain | 39 | Blink+Scream harass, Sonic Wave kills, rune mobility |
 | Zeus | 22 | Arc Lightning farming, global ult sniping, mana items |
+| Kez | 145 | Katana vs Sai stance trade values, Falcon Blade rush, ultimate windows |
 
 ## Quick Start
 
@@ -34,7 +38,7 @@ npm install
 ```
 
 ### 2. Configure `.env`
-The `.env` file should already contain your STRATZ API token and Steam ID:
+The `.env` file should contain your STRATZ API token and Steam ID:
 ```
 STRATZ_API_TOKEN=your_token_here
 STEAM_ACCOUNT_ID=your_steam_id
@@ -53,53 +57,55 @@ npm start
 ```
 
 The app will:
-1. Load item constants from STRATZ
-2. Pre-fetch Topson's match data for all enabled heroes
-3. Start the GSI server on port 3001
-4. Show a system tray icon
-5. Wait for you to start a Dota 2 match
+1. Initialize GSI Server on port 3001 and start serving the Web Dashboard.
+2. Load configuration and pre-fetch Topson's match data for enabled heroes.
+3. Show the system tray icon with status alerts.
+4. Auto-open a tab to `http://localhost:3001/dashboard.html` once the coach loads.
+
+---
 
 ## How It Works
 
 ```
-Dota 2 Client → GSI (HTTP POST) → GankMeDaddy → Voice Coaching
-                                       ↕
-                                  STRATZ API
-                              (Topson benchmarks)
+Dota 2 Client (GSI) ───► GSIServer (Port 3001) ◄─── Dashboard Web UI (Draft Select)
+                                 │
+                           MatchTracker
+                                 │
+                         CoachingEngine ◄─── STRATZ API (Topson data)
+                                 │
+                           VoiceOutput (TTS)
 ```
 
-1. **Dota 2 GSI** sends real-time game state to `localhost:3001` every 0.5s
-2. **Match Tracker** converts GSI data into typed `MatchSnapshot` objects
-3. **STRATZ Topson Analyzer** provides real item timing benchmarks from Topson's actual matches
-4. **Coaching Engine** runs general + hero-specific rules against each snapshot
-5. **Voice Output** speaks recommendations via Windows SAPI with priority queue
+1. **Dota 2 GSI** sends real-time game state to `localhost:3001` every 0.5s.
+2. **Match Tracker** converts GSI data into normalized snapshots.
+3. **STRATZ Topson Analyzer** provides real item timing benchmarks from Topson's actual matches.
+4. **Coaching Engine** evaluates general, build-path, counter, and hero-specific rules.
+5. **Voice Output** plays speech via Windows SAPI or neural Piper TTS with queue deduplication.
 
-## Adding New Heroes
+---
 
-1. Create `src/strategies/newHeroStrategy.ts` implementing `HeroStrategy`
-2. Add the hero ID to `HERO_IDS` in `src/coaching/types.ts`
-3. Register it in `src/strategies/index.ts`
-4. Done — Topson data and general rules apply automatically
+## Architecture & Code Map
 
-## Architecture
+For a detailed breakdown of the components, read our **[Codemaps Index](file:///d:/GankMeDaddy/docs/CODEMAPS/INDEX.md)**.
 
 ```
 src/
-├── index.ts                   # Entry point
+├── index.ts                   # Entry point and event coordinator
 ├── config/configManager.ts    # Settings persistence (%APPDATA%)
 ├── stratz/
 │   ├── stratzClient.ts        # STRATZ GraphQL client
 │   ├── topsonAnalyzer.ts      # Topson match data analysis
 │   └── queries.ts             # GraphQL queries
 ├── gsi/
-│   ├── gsiServer.ts           # Dota 2 GSI HTTP server
+│   ├── gsiServer.ts           # GSI HTTP server and Dashboard APIs
 │   └── gsiTypes.ts            # TypeScript types for GSI
 ├── coaching/
-│   ├── coachingEngine.ts      # Main coaching logic
-│   ├── matchTracker.ts        # Match orchestration
+│   ├── coachingEngine.ts      # Main coaching engine
+│   ├── matchTracker.ts        # Match/draft orchestrator
+│   ├── heroesData.ts          # Static hero index metadata
 │   └── types.ts               # Shared types
-├── strategies/                # Hero-specific modules
-│   ├── index.ts               # Strategy registry
+├── strategies/                # Hero-specific strategy modules
+│   ├── index.ts
 │   ├── voidSpiritStrategy.ts
 │   ├── sniperStrategy.ts
 │   ├── shadowFiendStrategy.ts
@@ -107,9 +113,14 @@ src/
 │   ├── stormSpiritStrategy.ts
 │   ├── monkeyKingStrategy.ts
 │   ├── queenOfPainStrategy.ts
-│   └── zeusStrategy.ts
-├── voice/voiceOutput.ts       # Windows SAPI TTS
-└── tray/trayApp.ts            # System tray UI
+│   ├── zeusStrategy.ts
+│   └── kezStrategy.ts
+├── voice/voiceOutput.ts       # Offline Piper & OneCore TTS manager
+└── tray/trayApp.ts            # System tray UI controller
+public/
+├── dashboard.html             # Draft Web Page
+├── dashboard.js               # Web UI controller
+└── dashboard.css              # Custom layout styles
 ```
 
 ## License
