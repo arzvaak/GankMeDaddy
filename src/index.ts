@@ -6,6 +6,7 @@
 import * as dotenv from 'dotenv';
 import * as fs from 'fs';
 import * as path from 'path';
+import { exec } from 'child_process';
 
 // Load environment variables FIRST using absolute path relative to index file
 dotenv.config({ path: path.join(__dirname, '..', '.env') });
@@ -125,6 +126,11 @@ async function main() {
     onTestVoice: () => {
       voice.test();
     },
+    onOpenDashboard: () => {
+      exec('start http://localhost:3001/dashboard.html', (err) => {
+        if (err) console.error('[TRAY] Failed to open dashboard:', err);
+      });
+    },
     onQuit: () => {
       console.log('[TRAY] Quitting GankMeDaddy...');
       gsi.stop();
@@ -135,14 +141,27 @@ async function main() {
 
   tray.start();
 
-  // Wire up heroDetected after tray is created
+  // Wire up heroDetected and matchEnd after tray is created
+  let dashboardOpened = false;
+
   tracker.on('heroDetected', (heroId: number) => {
     const heroName = HERO_NAMES[heroId] || `Hero ${heroId}`;
     tray.updateStatus(`Hero: ${heroName}`);
     const cfg = config.get();
     if (cfg.enabledHeroIds.includes(heroId)) {
       voice.speakNow(`${heroName} detected. Loading Topson data.`);
+      // Automatically open dashboard once the coach loads
+      if (!dashboardOpened) {
+        dashboardOpened = true;
+        exec('start http://localhost:3001/dashboard.html', (err) => {
+          if (err) console.error('[COACH] Failed to automatically open dashboard:', err);
+        });
+      }
     }
+  });
+
+  tracker.on('matchEnd', () => {
+    dashboardOpened = false;
   });
 
   // -------------------------------------------------------------------------

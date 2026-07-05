@@ -17,6 +17,7 @@ export interface TrayCallbacks {
   onToggleVoice: () => void;
   onSetupGSI: () => void;
   onTestVoice: () => void;
+  onOpenDashboard: () => void;
   onQuit: () => void;
 }
 
@@ -46,6 +47,7 @@ export class TrayApp {
 
     const menuItems = [
       { title: `Status: ${this.statusText}`, tooltip: 'Current status', enabled: false, checked: false },
+      { title: 'Open Web Dashboard', tooltip: 'Open matchup coach dashboard in browser', enabled: true, checked: false },
       { title: '─────────────', tooltip: '', enabled: false, checked: false },
       ...heroMenuItems,
       { title: '─────────────', tooltip: '', enabled: false, checked: false },
@@ -85,21 +87,24 @@ export class TrayApp {
 
       // Menu layout:
       // 0: status (disabled)
-      // 1: separator
-      // 2 to 2+heroCount-1: hero toggles
-      // 2+heroCount: separator
-      // 2+heroCount+1: voice toggle
-      // 2+heroCount+2: aggression display
-      // 2+heroCount+3: separator
-      // 2+heroCount+4: setup GSI
-      // 2+heroCount+5: test voice
-      // 2+heroCount+6: separator
-      // 2+heroCount+7: quit
+      // 1: Open Web Dashboard (enabled)
+      // 2: separator
+      // 3 to 3+heroCount-1: hero toggles
+      // 3+heroCount: separator
+      // 3+heroCount+1: voice toggle
+      // 3+heroCount+2: aggression display
+      // 3+heroCount+3: separator
+      // 3+heroCount+4: setup GSI
+      // 3+heroCount+5: test voice
+      // 3+heroCount+6: separator
+      // 3+heroCount+7: quit
 
-      const heroStart = 2;
+      const heroStart = 3;
       const heroEnd = heroStart + heroCount - 1;
 
-      if (idx >= heroStart && idx <= heroEnd) {
+      if (idx === 1) {
+        this.callbacks.onOpenDashboard();
+      } else if (idx >= heroStart && idx <= heroEnd) {
         const heroId = SUPPORTED_HERO_IDS[idx - heroStart];
         this.callbacks.onToggleHero(heroId);
       } else if (idx === heroEnd + 2) {
