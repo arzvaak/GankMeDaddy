@@ -10,7 +10,6 @@ export const stormSpiritStrategy: HeroStrategy = {
 
   analyzeSnapshot(snap: MatchSnapshot): CoachingRecommendation[] {
     const recs: CoachingRecommendation[] = [];
-    const t = snap.clockTime;
 
     // --- Pre-6 passive farming ---
     if (snap.hero.level < 6 && snap.phase === 'laning') {

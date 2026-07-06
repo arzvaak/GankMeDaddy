@@ -4,7 +4,7 @@
 // ============================================================================
 
 import fetch from 'node-fetch';
-import { PLAYER_MATCHES_QUERY, MATCH_DETAILS_QUERY, ITEM_CONSTANTS_QUERY } from './queries';
+import { PLAYER_MATCHES_QUERY, MATCH_DETAILS_QUERY, ITEM_CONSTANTS_QUERY, HERO_GUIDES_QUERY } from './queries';
 
 const STRATZ_GRAPHQL_URL = 'https://api.stratz.com/graphql';
 const TOPSON_STEAM_ID = 94054712;
@@ -24,28 +24,53 @@ export class StratzClient {
   /**
    * Execute a GraphQL query against STRATZ API.
    */
-  private async query<T = any>(queryStr: string, variables: Record<string, any> = {}): Promise<T> {
-    const response = await fetch(STRATZ_GRAPHQL_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${this.apiToken}`,
-        'User-Agent': 'STRATZ_API',
-      },
-      body: JSON.stringify({ query: queryStr, variables }),
-    });
+  private async query<T = any>(
+    queryStr: string,
+    variables: Record<string, any> = {},
+    retries: number = 3,
+    delayMs: number = 1000
+  ): Promise<T> {
+    for (let attempt = 1; attempt <= retries; attempt++) {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 8000); // 8-second timeout
 
-    if (!response.ok) {
-      throw new Error(`STRATZ API error: ${response.status} ${response.statusText}`);
+      try {
+        const response = await fetch(STRATZ_GRAPHQL_URL, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${this.apiToken}`,
+            'User-Agent': 'STRATZ_API',
+          },
+          body: JSON.stringify({ query: queryStr, variables }),
+          signal: controller.signal as any,
+        });
+
+        clearTimeout(timeoutId);
+
+        if (!response.ok) {
+          throw new Error(`STRATZ API error: ${response.status} ${response.statusText}`);
+        }
+
+        const json = await response.json() as any;
+        if (json.errors && json.errors.length > 0) {
+          const msgs = json.errors.map((e: any) => e.message).join('; ');
+          throw new Error(`STRATZ GraphQL errors: ${msgs}`);
+        }
+
+        return json.data as T;
+      } catch (err: any) {
+        clearTimeout(timeoutId);
+        const isAbort = err.name === 'AbortError';
+        console.warn(`[STRATZ] Query attempt ${attempt} failed (Timeout: ${isAbort}): ${err.message}`);
+        if (attempt === retries) {
+          throw err;
+        }
+        // Wait before retry
+        await new Promise((resolve) => setTimeout(resolve, delayMs * attempt));
+      }
     }
-
-    const json = await response.json() as any;
-    if (json.errors && json.errors.length > 0) {
-      const msgs = json.errors.map((e: any) => e.message).join('; ');
-      throw new Error(`STRATZ GraphQL errors: ${msgs}`);
-    }
-
-    return json.data as T;
+    throw new Error('STRATZ query failed after all retry attempts');
   }
 
   /**
@@ -116,5 +141,14 @@ export class StratzClient {
   async fetchMatchDetails(matchId: number): Promise<any> {
     const data = await this.query(MATCH_DETAILS_QUERY, { matchId });
     return data?.match || null;
+  }
+
+  /**
+   * Fetch recent guide matches for a specific hero.
+   * Returns list of { matchId: number, steamAccountId: number }
+   */
+  async fetchHeroGuides(heroId: number, take: number = 5): Promise<any[]> {
+    const data = await this.query(HERO_GUIDES_QUERY, { heroId, take });
+    return data?.heroStats?.guide?.[0]?.guides || [];
   }
 }

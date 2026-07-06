@@ -148,3 +148,19 @@ query ItemConstants {
   }
 }
 `;
+
+/**
+ * Fetch recent guide matches for a specific hero.
+ */
+export const HERO_GUIDES_QUERY = `
+query GetHeroGuides($heroId: Short!, $take: Int) {
+  heroStats {
+    guide(heroId: $heroId, take: $take) {
+      guides {
+        matchId
+        steamAccountId
+      }
+    }
+  }
+}
+`;

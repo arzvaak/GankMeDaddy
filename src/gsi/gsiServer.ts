@@ -5,10 +5,7 @@
 
 import express from 'express';
 import { EventEmitter } from 'events';
-import { GameState, GSIMap } from './gsiTypes';
-import { DOTA_HEROES } from '../coaching/heroesData';
-import { MatchupDraft } from '../coaching/types';
-import * as path from 'path';
+import { GameState } from './gsiTypes';
 
 export interface GSIServerOptions {
   port: number;
@@ -20,17 +17,12 @@ export class GSIServer extends EventEmitter {
   private server: any;
   private lastGameState: string = ''; // track to detect game start/end
   private connected: boolean = false;
-  private currentMatchup: MatchupDraft | null = null;
 
   constructor(options: GSIServerOptions) {
     super();
     this.port = options.port;
     this.app = express();
     this.app.use(express.json({ limit: '1mb' }));
-    
-    // Serve static files from public directory
-    const publicPath = path.join(__dirname, '..', '..', 'public');
-    this.app.use(express.static(publicPath));
     
     this.setupRoutes();
   }
@@ -40,9 +32,8 @@ export class GSIServer extends EventEmitter {
    */
   start(): Promise<void> {
     return new Promise((resolve) => {
-      this.server = this.app.listen(this.port, '0.0.0.0', () => {
-        console.log(`[GSI] Server listening on http://0.0.0.0:${this.port}`);
-        console.log(`[GSI] Dashboard available at http://localhost:${this.port}/dashboard.html`);
+      this.server = this.app.listen(this.port, '127.0.0.1', () => {
+        console.log(`[GSI] Server listening on http://127.0.0.1:${this.port} (localhost only)`);
         console.log('[GSI] Waiting for Dota 2 game state data...');
         resolve();
       });
@@ -66,36 +57,7 @@ export class GSIServer extends EventEmitter {
     return this.connected;
   }
 
-  /**
-   * Get the manually selected matchup draft.
-   */
-  getMatchup(): MatchupDraft | null {
-    return this.currentMatchup;
-  }
-
   private setupRoutes(): void {
-    // API to get all Dota 2 heroes
-    this.app.get('/api/heroes', (_req, res) => {
-      res.json(DOTA_HEROES);
-    });
-
-    // API to get/set current matchup draft
-    this.app.get('/api/matchup', (_req, res) => {
-      res.json(this.currentMatchup);
-    });
-
-    this.app.post('/api/matchup', (req, res) => {
-      const draft: MatchupDraft = req.body;
-      if (!draft || !Array.isArray(draft.radiantHeroIds) || !Array.isArray(draft.direHeroIds)) {
-        res.status(400).json({ error: 'Invalid draft format' });
-        return;
-      }
-      this.currentMatchup = draft;
-      console.log(`[GSI] Matchup synced manually! Player Hero ID: ${draft.myHeroId}`);
-      this.emit('matchupUpdated', draft);
-      res.json({ status: 'ok', currentMatchup: this.currentMatchup });
-    });
-
     this.app.post('/', (req, res) => {
       const gameState: GameState = req.body;
       res.sendStatus(200);

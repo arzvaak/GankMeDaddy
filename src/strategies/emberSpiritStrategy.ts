@@ -10,7 +10,6 @@ export const emberSpiritStrategy: HeroStrategy = {
 
   analyzeSnapshot(snap: MatchSnapshot): CoachingRecommendation[] {
     const recs: CoachingRecommendation[] = [];
-    const t = snap.clockTime;
 
     // --- Remnant safety check ---
     if (snap.hero.alive && snap.phase !== 'lategame') {

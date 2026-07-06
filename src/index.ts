@@ -6,8 +6,6 @@
 import * as dotenv from 'dotenv';
 import * as fs from 'fs';
 import * as path from 'path';
-import { exec } from 'child_process';
-
 // Load environment variables FIRST using absolute path relative to index file
 dotenv.config({ path: path.join(__dirname, '..', '.env') });
 
@@ -57,14 +55,20 @@ async function main() {
   // -------------------------------------------------------------------------
   const stratz = new StratzClient({ apiToken: STRATZ_API_TOKEN });
 
-  // Load item constants first (needed for item name resolution)
-  console.log('[INIT] Loading item constants from STRATZ...');
-  await stratz.loadItemConstants();
-
   // Initialize Topson analyzer and preload hero data
   const topson = new TopsonAnalyzer(stratz);
-  console.log('[INIT] Pre-loading Topson match data from STRATZ...');
-  await topson.preloadAllHeroes(cfg.enabledHeroIds);
+
+  // Load item constants and preload enabled heroes in the background so startup is non-blocking
+  (async () => {
+    try {
+      console.log('[INIT] Loading item constants from STRATZ...');
+      await stratz.loadItemConstants();
+      console.log('[INIT] Pre-loading Topson/Guide match data from STRATZ...');
+      await topson.preloadAllHeroes(cfg.enabledHeroIds);
+    } catch (err) {
+      console.error('[INIT] Background STRATZ preloading failed:', err);
+    }
+  })();
 
   // -------------------------------------------------------------------------
   // 3. Initialize Voice Output
@@ -81,11 +85,14 @@ async function main() {
   // 5. Initialize Match Tracker + Coaching Engine
   // -------------------------------------------------------------------------
   const tracker = new MatchTracker(gsi, stratz, topson, config);
-  const coach = new CoachingEngine(voice, config);
+  const coach = new CoachingEngine(voice);
 
-  // Wire up events
   tracker.on('matchStart', (heroId: number) => {
-    coach.onMatchStart(heroId);
+    const context = tracker.getStratzContext();
+    const profile = context?.topsonProfile;
+    const isGuideMode = profile?.isGuideMode || false;
+    const hasData = !!profile;
+    coach.onMatchStart(heroId, isGuideMode, hasData);
   });
 
   tracker.on('matchEnd', () => {
@@ -126,11 +133,6 @@ async function main() {
     onTestVoice: () => {
       voice.test();
     },
-    onOpenDashboard: () => {
-      exec('start http://localhost:3001/dashboard.html', (err) => {
-        if (err) console.error('[TRAY] Failed to open dashboard:', err);
-      });
-    },
     onQuit: () => {
       console.log('[TRAY] Quitting GankMeDaddy...');
       gsi.stop();
@@ -141,27 +143,15 @@ async function main() {
 
   tray.start();
 
-  // Wire up heroDetected and matchEnd after tray is created
-  let dashboardOpened = false;
-
   tracker.on('heroDetected', (heroId: number) => {
     const heroName = HERO_NAMES[heroId] || `Hero ${heroId}`;
     tray.updateStatus(`Hero: ${heroName}`);
     const cfg = config.get();
     if (cfg.enabledHeroIds.includes(heroId)) {
       voice.speakNow(`${heroName} detected. Loading Topson data.`);
-      // Automatically open dashboard once the coach loads
-      if (!dashboardOpened) {
-        dashboardOpened = true;
-        exec('start http://localhost:3001/dashboard.html', (err) => {
-          if (err) console.error('[COACH] Failed to automatically open dashboard:', err);
-        });
-      }
+    } else {
+      voice.speakNow(`${heroName} detected. Loading STRATZ guide data.`);
     }
-  });
-
-  tracker.on('matchEnd', () => {
-    dashboardOpened = false;
   });
 
   // -------------------------------------------------------------------------
@@ -195,7 +185,6 @@ async function main() {
  */
 function setupGSIConfig(config: ConfigManager): void {
   const cfg = config.get();
-  const srcFile = path.join(__dirname, 'gsi', 'gamestate_integration_gankmedaddy.cfg');
   const destDir = path.join(cfg.dota2Path, 'game', 'dota', 'cfg', 'gamestate_integration');
   const destFile = path.join(destDir, 'gamestate_integration_gankmedaddy.cfg');
 

@@ -1,6 +1,6 @@
 # Data Config & Persistence Codemap
 
-**Last Updated:** 2026-07-05
+**Last Updated:** 2026-07-06
 **Entry Point:** [src/config/configManager.ts](file:///d:/GankMeDaddy/src/config/configManager.ts)
 
 GankMeDaddy stores active user preferences, selected hero lists, voice states, and system paths in a structured JSON configuration file.
@@ -45,5 +45,5 @@ To avoid configuration corruption when updating hero pools (e.g., adding Kez, ID
 ---
 
 ## Related Codemaps
-- **[Web Dashboard & Tray UI](file:///d:/GankMeDaddy/docs/CODEMAPS/frontend.md)**
+- **[Tray UI](file:///d:/GankMeDaddy/docs/CODEMAPS/frontend.md)**
 - **[Coaching Engine & API Backend](file:///d:/GankMeDaddy/docs/CODEMAPS/backend.md)**

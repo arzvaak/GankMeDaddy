@@ -7,20 +7,10 @@
 import {
   MatchSnapshot,
   CoachingRecommendation,
-  HeroStrategy,
   HERO_NAMES,
-  SUPPORTED_HERO_IDS,
 } from './types';
 import { strategyRegistry } from '../strategies';
 import { VoiceOutput } from '../voice/voiceOutput';
-import { ConfigManager } from '../config/configManager';
-
-// Dota 2 item name constants (GSI uses these internal names)
-const ITEM_BOTTLE = 'bottle';
-const ITEM_BKB = 'black_king_bar';
-const ITEM_BLINK = 'blink';
-const ITEM_AGHS = 'ultimate_scepter';
-const ITEM_SHARD = 'aghanims_shard';
 
 const MAGICAL_ITEMS = [
   'kaya', 'veil_of_discord', 'dagon', 'euls_scepter', 'octarine_core', 
@@ -35,33 +25,8 @@ const PHYSICAL_ITEMS = [
   'abyssal_blade', 'swift_blink', 'nullifier'
 ];
 
-const ENEMY_COUNTERS: Record<number, { name: string; advice: string }> = {
-  22: { name: 'Zeus', advice: 'Zeus deals heavy magic burst. Consider buying Mage Slayer, Pipe of Insight, or Black King Bar early.' },
-  35: { name: 'Sniper', advice: 'Sniper relies on distance. You need gap close items like Blink Dagger or Shadow Blade to jump him.' },
-  11: { name: 'Shadow Fiend', advice: 'Shadow Fiend has high physical and magical burst. Be careful of his Eul\'s Requiem combo. Buy Eul\'s or BKB to counter.' },
-  17: { name: 'Storm Spirit', advice: 'Storm Spirit is highly mobile. Buy Orchid Malevolence, Rod of Atos, or Scythe of Vyse to lock him down.' },
-  106: { name: 'Ember Spirit', advice: 'Ember Spirit is slippery. Orchid Malevolence or Scythe of Vyse is essential to catch him before he remnants away.' },
-  126: { name: 'Void Spirit', advice: 'Void Spirit has high magic shield and escape. Orchid Malevolence or Nullifier shuts him down.' },
-  114: { name: 'Monkey King', advice: 'Monkey King dominates melee matchups. Do not fight him inside his Wukong\'s Command circle. Buy Force Staff to push him out.' },
-  39: { name: 'Queen of Pain', advice: 'Queen of Pain has blink escape and magic burst. Buy Orchid to silence her Blink.' },
-  145: { name: 'Kez', advice: 'Kez is highly elusive and parries attacks in Sai stance. Do not hit him during parry. Buy Orchid or Scythe of Vyse to lock him down.' },
-  44: { name: 'Phantom Assassin', advice: 'Phantom Assassin has high evasion and physical burst. You will need Monkey King Bar to hit her through evasion.' },
-  1: { name: 'Anti-Mage', advice: 'Anti-Mage burns mana and has magic resistance. Avoid letting him hit you if you are mana-reliant. Buy Orchid or physical burst.' },
-  14: { name: 'Pudge', advice: 'Pudge has high magic resistance and Hook. Watch your positioning behind creeps, and buy ward vision to spot hooks.' },
-  59: { name: 'Huskar', advice: 'Huskar gets high magic resistance and attack speed at low HP. Buy Spirit Vessel or Eye of Skadi to reduce his healing.' },
-  99: { name: 'Bristleback', advice: 'Bristleback takes reduced damage from behind. Buy Silver Edge to break his passive, or buy Spirit Vessel.' },
-  98: { name: 'Timbersaw', advice: 'Timbersaw has high armor and passive health regen. Buy Spirit Vessel or Mage Slayer to reduce his spell damage.' },
-  36: { name: 'Necrophos', advice: 'Necrophos uses Ghost Shroud to heal and gain physical immunity. Buy Nullifier to purge Ghost Shroud, or buy magic burst.' },
-  10: { name: 'Morphling', advice: 'Morphling can shift stats to gain high strength. Spirit Vessel or Eye of Skadi counters his high sustain.' },
-  2: { name: 'Axe', advice: 'Axe has Berserker\'s Call which forces you to attack him. Buy Eul\'s Scepter to lift him when he initiates, or buy armor.' },
-  42: { name: 'Wraith King', advice: 'Wraith King has Reincarnation. Be prepared to fight him twice. Diffusal Blade burns his mana so he can\'t resurrect.' },
-  94: { name: 'Medusa', advice: 'Medusa relies on Mana Shield. Diffusal Blade or Eye of Skadi is crucial to drain her mana pool quickly.' }
-};
-
 export class CoachingEngine {
   private voice: VoiceOutput;
-  private config: ConfigManager;
-  private lastClockTime: number = -999;
   private lastRumeReminder: number = -999;
   private lastLotusReminder: number = -999;
   private lastDaytime: boolean | null = null;
@@ -73,18 +38,15 @@ export class CoachingEngine {
   private startingItemsAdvised: boolean = false;
   private lastItemAdviceClockTime: number = -999;
   private detectedBuildType: 'magical' | 'physical' | 'none' = 'none';
-  private matchupBriefed: boolean = false;
 
-  constructor(voice: VoiceOutput, config: ConfigManager) {
+  constructor(voice: VoiceOutput) {
     this.voice = voice;
-    this.config = config;
   }
 
   /**
    * Called when a new match starts. Resets state.
    */
-  onMatchStart(heroId: number): void {
-    this.lastClockTime = -999;
+  onMatchStart(heroId: number, isGuideMode: boolean = false, hasData: boolean = false): void {
     this.lastRumeReminder = -999;
     this.lastLotusReminder = -999;
     this.lastDaytime = null;
@@ -96,17 +58,17 @@ export class CoachingEngine {
     this.startingItemsAdvised = false;
     this.lastItemAdviceClockTime = -999;
     this.detectedBuildType = 'none';
-    this.matchupBriefed = false;
 
     const heroName = HERO_NAMES[heroId] || 'your hero';
-    const cfg = this.config.get();
-    const isEnabled = cfg.enabledHeroIds.includes(heroId);
 
-    if (isEnabled) {
-      this.voice.speakNow(`Match started. Playing ${heroName}. Coaching active. Full Topson mode.`);
+    if (hasData) {
+      if (isGuideMode) {
+        this.voice.speakNow(`Match started. Playing ${heroName}. Coaching active using STRATZ pro guides.`);
+      } else {
+        this.voice.speakNow(`Match started. Playing ${heroName}. Coaching active. Full Topson mode.`);
+      }
     } else {
-      this.voice.speakNow(`Match started with ${heroName}. This hero is not in your coaching set. Coaching paused.`);
-      this.matchStarted = false;
+      this.voice.speakNow(`Match started with ${heroName}. No pro match data found. General laning coaching active.`);
     }
   }
 
@@ -124,9 +86,6 @@ export class CoachingEngine {
   processSnapshot(snapshot: MatchSnapshot): void {
     if (!this.matchStarted) return;
 
-    const cfg = this.config.get();
-    if (!cfg.enabledHeroIds.includes(snapshot.hero.heroId)) return;
-
     const recommendations: CoachingRecommendation[] = [];
 
     // Trigger starting items advice if during pre-game or early start (clockTime <= 15) and not yet done
@@ -139,39 +98,6 @@ export class CoachingEngine {
           category: 'item',
           message: `Topson's starting items: ${profile.startingItems.join(', ')}.`,
           cooldownKey: 'starting_items',
-          cooldownSeconds: 999999,
-        });
-      }
-    }
-
-    // --- Matchup Briefing ---
-    if (!this.matchupBriefed && snapshot.matchup) {
-      let enemyHeroIds: number[] = [];
-      const matchup = snapshot.matchup;
-      const myHeroId = snapshot.hero.heroId || matchup.myHeroId;
-
-      const isMyHeroRadiant = matchup.radiantHeroIds.includes(myHeroId);
-      const isMyHeroDire = matchup.direHeroIds.includes(myHeroId);
-      if (isMyHeroRadiant) {
-        enemyHeroIds = matchup.direHeroIds;
-      } else if (isMyHeroDire) {
-        enemyHeroIds = matchup.radiantHeroIds;
-      } else {
-        enemyHeroIds = [...matchup.radiantHeroIds, ...matchup.direHeroIds].filter(id => id !== myHeroId);
-      }
-
-      const advices = enemyHeroIds
-        .map(id => ENEMY_COUNTERS[id])
-        .filter(Boolean);
-
-      if (advices.length > 0) {
-        this.matchupBriefed = true;
-        const briefingMsg = `Matchup analysis active. ${advices.slice(0, 3).map(a => a.advice).join(' ')}`;
-        recommendations.push({
-          priority: 'critical',
-          category: 'rotation',
-          message: briefingMsg,
-          cooldownKey: 'matchup_briefing',
           cooldownSeconds: 999999,
         });
       }
@@ -217,7 +143,6 @@ export class CoachingEngine {
 
     // Periodic cooldown cleanup
     this.voice.cleanupCooldowns();
-    this.lastClockTime = snapshot.clockTime;
   }
 
   // =========================================================================
@@ -404,7 +329,6 @@ export class CoachingEngine {
       return recs;
     }
 
-    const playerGold = snap.player.gold;
     const playerItems = new Set(snap.items.map(i => i.itemName.toLowerCase()));
 
     for (const timing of profile.itemTimings) {
@@ -462,9 +386,6 @@ export class CoachingEngine {
 
       // If we're approaching Topson's timing and have enough gold — suggest buying
       if (timingDiff >= -30 && timingDiff <= 60) {
-        const itemInfo = snap.stratzContext.topsonProfile?.itemTimings.find(
-          it => it.itemId === timing.itemId
-        );
         // We can't check exact cost from GSI, but we can note the timing window
         this.topsonItemsAdvised.add(adviceKey);
         this.lastItemAdviceClockTime = t;

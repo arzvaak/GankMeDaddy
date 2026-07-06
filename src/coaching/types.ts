@@ -1,10 +1,5 @@
-// ============================================================================
-// GankMeDaddy — Shared Types for Coaching Engine
-// ============================================================================
+import { DOTA_HEROES } from './heroesData';
 
-// ---------------------------------------------------------------------------
-// Hero definitions
-// ---------------------------------------------------------------------------
 export const HERO_IDS = {
   VOID_SPIRIT: 126,
   SNIPER: 35,
@@ -17,17 +12,10 @@ export const HERO_IDS = {
   KEZ: 145,
 } as const;
 
-export const HERO_NAMES: Record<number, string> = {
-  [HERO_IDS.VOID_SPIRIT]: 'Void Spirit',
-  [HERO_IDS.SNIPER]: 'Sniper',
-  [HERO_IDS.SHADOW_FIEND]: 'Shadow Fiend',
-  [HERO_IDS.EMBER_SPIRIT]: 'Ember Spirit',
-  [HERO_IDS.STORM_SPIRIT]: 'Storm Spirit',
-  [HERO_IDS.MONKEY_KING]: 'Monkey King',
-  [HERO_IDS.QUEEN_OF_PAIN]: 'Queen of Pain',
-  [HERO_IDS.ZEUS]: 'Zeus',
-  [HERO_IDS.KEZ]: 'Kez',
-};
+export const HERO_NAMES: Record<number, string> = {};
+for (const h of DOTA_HEROES) {
+  HERO_NAMES[h.id] = h.name;
+}
 
 export const SUPPORTED_HERO_IDS = Object.values(HERO_IDS) as number[];
 
@@ -78,6 +66,8 @@ export interface TopsonHeroProfile {
   startingItems: string[];
   /** Average game duration in seconds */
   avgDuration: number;
+  /** Whether this profile was compiled from STRATZ Pro Guides fallback */
+  isGuideMode?: boolean;
 }
 
 // ---------------------------------------------------------------------------
@@ -144,12 +134,6 @@ export interface StratzContext {
   userWinRate: number | null;
 }
 
-export interface MatchupDraft {
-  radiantHeroIds: number[];
-  direHeroIds: number[];
-  myHeroId: number;
-}
-
 export interface MatchSnapshot {
   /** Game time in seconds (includes pre-horn time, can be negative) */
   gameTime: number;
@@ -171,8 +155,6 @@ export interface MatchSnapshot {
   buildings: BuildingSnapshot[];
   /** Pre-fetched STRATZ context for the current hero */
   stratzContext: StratzContext;
-  /** Manually configured draft matchup from dashboard */
-  matchup?: MatchupDraft | null;
 }
 
 // ---------------------------------------------------------------------------

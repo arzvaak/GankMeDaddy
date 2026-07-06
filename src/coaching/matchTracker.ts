@@ -18,7 +18,6 @@ import {
   AbilitySlot,
   BuildingSnapshot,
   StratzContext,
-  SUPPORTED_HERO_IDS,
 } from './types';
 
 export class MatchTracker extends EventEmitter {
@@ -52,6 +51,13 @@ export class MatchTracker extends EventEmitter {
    */
   getLastSnapshot(): MatchSnapshot | null {
     return this.lastSnapshot;
+  }
+
+  /**
+   * Get the loaded STRATZ context.
+   */
+  getStratzContext(): StratzContext | null {
+    return this.stratzContext;
   }
 
   /**
@@ -94,17 +100,6 @@ export class MatchTracker extends EventEmitter {
       }
     });
 
-    this.gsi.on('matchupUpdated', async (draft) => {
-      if (draft.myHeroId && draft.myHeroId !== this.currentHeroId) {
-        this.currentHeroId = draft.myHeroId;
-        this.inMatch = true;
-        console.log(`[TRACKER] Matchup updated. Selected Hero ID: ${this.currentHeroId}`);
-        await this.loadStratzContext(this.currentHeroId);
-        this.emit('heroDetected', this.currentHeroId);
-        this.emit('matchStart', this.currentHeroId);
-      }
-    });
-
     this.gsi.on('matchEnd', (_state: GameState) => {
       console.log('[TRACKER] Match ended.');
       this.inMatch = false;
@@ -136,7 +131,7 @@ export class MatchTracker extends EventEmitter {
   }
 
   private async loadStratzContext(heroId: number): Promise<void> {
-    if (!heroId || !SUPPORTED_HERO_IDS.includes(heroId)) {
+    if (!heroId || heroId <= 0) {
       this.stratzContext = {
         topsonProfile: null,
         userRecentMatches: 0,
@@ -147,7 +142,7 @@ export class MatchTracker extends EventEmitter {
 
     console.log(`[TRACKER] Loading STRATZ context for hero ${heroId}...`);
 
-    // Get Topson's profile (may already be cached from preload)
+    // Get Topson's profile (may already be cached from preload or will load on-demand)
     const topsonProfile = await this.topson.analyzeHero(heroId);
 
     // Fetch user's own recent matches on this hero
@@ -173,13 +168,19 @@ export class MatchTracker extends EventEmitter {
       console.warn('[TRACKER] Failed to fetch user matches:', (err as Error).message);
     }
 
+    // Prevent stale async STRATZ context from overwriting the current hero context
+    if (this.currentHeroId !== heroId) {
+      console.log(`[TRACKER] Discarded stale STRATZ context for hero ${heroId} (current hero is ${this.currentHeroId})`);
+      return;
+    }
+
     this.stratzContext = {
       topsonProfile,
       userRecentMatches,
       userWinRate,
     };
 
-    console.log(`[TRACKER] STRATZ context loaded. Topson data: ${topsonProfile ? 'yes' : 'no'}, User matches: ${userRecentMatches}`);
+    console.log(`[TRACKER] STRATZ context loaded. Topson/Guide data: ${topsonProfile ? 'yes' : 'no'}, User matches: ${userRecentMatches}`);
   }
 
   private buildSnapshot(state: GameState): MatchSnapshot | null {
@@ -305,7 +306,6 @@ export class MatchTracker extends EventEmitter {
             userRecentMatches: 0,
             userWinRate: null,
           },
-      matchup: this.gsi.getMatchup(),
     };
   }
 }

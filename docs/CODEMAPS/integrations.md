@@ -1,6 +1,6 @@
 # External Integrations Codemap
 
-**Last Updated:** 2026-07-05
+**Last Updated:** 2026-07-06
 **Entry Points:**
 - [src/stratz/stratzClient.ts](file:///d:/GankMeDaddy/src/stratz/stratzClient.ts)
 - [src/voice/voiceOutput.ts](file:///d:/GankMeDaddy/src/voice/voiceOutput.ts)
@@ -43,25 +43,24 @@ Voice announcements are processed locally and offline to prevent latency or depe
                                    |
                        Check if Piper Exists?
                                    |
-                     +-------------+-------------+
-                     | Yes                       | No
-                     v                           v
-         +-----------------------+   +-----------------------+
-         |     playPiperSpeech   |   |   playFallbackSpeech  |
-         +-----------------------+   +-----------------------+
-         | 1. Spawn Piper process|   | 1. Write PS1 script   |
-         | 2. Generate Temp WAV  |   | 2. Spawn Powershell   |
-         | 3. Play WAV Sync      |   | 3. Synthesize & Play  |
-         +-----------------------+   +-----------------------+
+                      +-------------+-------------+
+                      | Yes                       | No
+                      v                           v
+          +-----------------------+   +-----------------------+
+          |     playPiperSpeech   |   |   playFallbackSpeech  |
+          +-----------------------+   +-----------------------+
+          | 1. Spawn Piper process|   | 1. Write PS1 script   |
+          | 2. Generate Temp WAV  |   | 2. Spawn Powershell   |
+          | 3. Play WAV Sync      |   | 3. Synthesize & Play  |
+          +-----------------------+   +-----------------------+
 ```
 
 ### Safety Features
 - **Interrupt Protection**: To stop overlapping audio, the engine terminates running pipelines forcefully using `taskkill /f /t /pid` before spawning new statements.
 - **Queue Cooldowns**: Skips stale requests (>15 seconds old) or duplicates with active cooldown timers.
-- **Enabled Check**: Stops draft-sync actions from triggering speech announcements for heroes not enabled in the user configuration.
 
 ---
 
 ## Related Codemaps
-- **[Web Dashboard & Tray UI](file:///d:/GankMeDaddy/docs/CODEMAPS/frontend.md)**
+- **[Tray UI](file:///d:/GankMeDaddy/docs/CODEMAPS/frontend.md)**
 - **[Coaching Engine & API Backend](file:///d:/GankMeDaddy/docs/CODEMAPS/backend.md)**

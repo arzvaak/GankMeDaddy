@@ -1,6 +1,6 @@
 # Coaching Engine & API Backend Codemap
 
-**Last Updated:** 2026-07-05
+**Last Updated:** 2026-07-06
 **Entry Points:**
 - [src/gsi/gsiServer.ts](file:///d:/GankMeDaddy/src/gsi/gsiServer.ts)
 - [src/coaching/coachingEngine.ts](file:///d:/GankMeDaddy/src/coaching/coachingEngine.ts)
@@ -9,16 +9,13 @@ This codemap covers GankMeDaddy's backend architecture, detailing endpoints, tel
 
 ---
 
-## 1. Express API and GSI Server
+## 1. Express GSI Server
 
-The HTTP server serves dashboard assets, handles matchup syncing, and listens for Dota 2 Game State Integration telemetry payload posts.
+The HTTP server listens for Dota 2 Game State Integration telemetry payload posts.
 
 ### Endpoints
 - `POST /` — Receives JSON payloads from the Dota 2 game client GSI pipeline.
 - `GET /health` — Simple health check return code.
-- `GET /api/heroes` — Returns the sorted list of supported mid lane heroes.
-- `GET /api/matchup` — Retrieves the active draft (Radiant/Dire team lineups and designated hero).
-- `POST /api/matchup` — Receives and updates manual draft selections from the dashboard.
 
 ---
 
@@ -83,5 +80,5 @@ Hero strategies implement `HeroStrategy` ([src/strategies/index.ts](file:///d:/G
 ---
 
 ## Related Codemaps
-- **[Web Dashboard & Tray UI](file:///d:/GankMeDaddy/docs/CODEMAPS/frontend.md)**
+- **[Tray UI](file:///d:/GankMeDaddy/docs/CODEMAPS/frontend.md)**
 - **[External Integrations](file:///d:/GankMeDaddy/docs/CODEMAPS/integrations.md)**

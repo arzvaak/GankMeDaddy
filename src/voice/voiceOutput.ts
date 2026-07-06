@@ -32,8 +32,8 @@ export class VoiceOutput {
   private activeProcess: any = null;
 
   // Piper paths
-  private readonly piperExe = 'D:\\GankMeDaddy\\bin\\piper\\piper.exe';
-  private readonly piperModel = 'D:\\GankMeDaddy\\bin\\piper\\en_GB-jenny_dioco-medium.onnx';
+  private readonly piperExe = path.resolve(__dirname, '../../bin/piper/piper.exe');
+  private readonly piperModel = path.resolve(__dirname, '../../bin/piper/en_GB-jenny_dioco-medium.onnx');
 
   constructor(enabled: boolean = true, rate: number = 1.0) {
     this.enabled = enabled;

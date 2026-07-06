@@ -1,20 +1,19 @@
 # 🎮 GankMeDaddy — Dota 2 Live Mid Coaching Agent
 
-A lightweight Windows 11 system tray and web dashboard application that provides **real-time voice coaching** for mid lane play, using **Topson's actual match data** from STRATZ as benchmarks.
+A lightweight Windows 11 system tray application that provides **real-time voice coaching** for mid lane play, using **Topson's actual match data** and STRATZ pro guides as benchmarks.
 
 ## Features
 
 - 🎯 **Real-time voice coaching** via offline high-quality neural Piper TTS with standard OneCore Speech fallback.
-- 🖥️ **Web Matchup Dashboard** — High-end glassmorphism UI (`http://localhost:3001/dashboard.html`) to manually select drafts and select your hero.
-- 📊 **Data-driven benchmarks** from Topson's actual STRATZ match history (item timings, GPM, KDA).
-- 🎮 **Dota 2 Game State Integration** for live game telemetry (HP, mana, gold, items, abilities).
+- 📊 **Data-driven benchmarks** from Topson's actual STRATZ match history and STRATZ pro guides (item timings, GPM, KDA).
+- 🎮 **Dota 2 Game State Integration** for live game telemetry (HP, mana, gold, items, abilities), locked down locally to `127.0.0.1`.
 - 🏆 **9 mid heroes** with dedicated, robust strategy modules.
 - 🔀 **Dynamic Build-Path Branching** — Automatically detects physical/magical item trajectories and filters advice dynamically.
 - 🛡️ **Enemy Counter Briefings** — Pre-game analysis and counter tips for dangerous opponent heroes.
 - ⏱️ **Rune/Lotus/Shrine timers** with voice reminders.
 - 📈 **Creep score checkpoints** at 10/20/30 min vs Topson's pace.
 - 🔊 **Priority-based TTS queue** with interrupt protection and cooldown deduplication.
-- ⚙️ **Lightweight System Tray** — Toggle hero pools, voice switch, setup GSI, or launch dashboard instantly.
+- ⚙️ **Lightweight System Tray** — Toggle hero pools, voice switch, setup GSI, or close the application.
 
 ## Supported Heroes
 
@@ -57,28 +56,27 @@ npm start
 ```
 
 The app will:
-1. Initialize GSI Server on port 3001 and start serving the Web Dashboard.
-2. Load configuration and pre-fetch Topson's match data for enabled heroes.
+1. Initialize GSI Server on port 3001 (listening on localhost `127.0.0.1` only).
+2. Load configuration and pre-fetch Topson's match data/STRATZ guides for enabled heroes in the background.
 3. Show the system tray icon with status alerts.
-4. Auto-open a tab to `http://localhost:3001/dashboard.html` once the coach loads.
 
 ---
 
 ## How It Works
 
 ```
-Dota 2 Client (GSI) ───► GSIServer (Port 3001) ◄─── Dashboard Web UI (Draft Select)
+Dota 2 Client (GSI) ───► GSIServer (Port 3001, localhost)
                                  │
                            MatchTracker
                                  │
-                         CoachingEngine ◄─── STRATZ API (Topson data)
+                         CoachingEngine ◄─── STRATZ API (Topson / Pro Guide data)
                                  │
                            VoiceOutput (TTS)
 ```
 
-1. **Dota 2 GSI** sends real-time game state to `localhost:3001` every 0.5s.
+1. **Dota 2 GSI** sends real-time game state to `127.0.0.1:3001` every 0.5s.
 2. **Match Tracker** converts GSI data into normalized snapshots.
-3. **STRATZ Topson Analyzer** provides real item timing benchmarks from Topson's actual matches.
+3. **STRATZ Topson Analyzer** provides real item timing benchmarks from Topson's matches or fallback pro guides.
 4. **Coaching Engine** evaluates general, build-path, counter, and hero-specific rules.
 5. **Voice Output** plays speech via Windows SAPI or neural Piper TTS with queue deduplication.
 
@@ -93,11 +91,11 @@ src/
 ├── index.ts                   # Entry point and event coordinator
 ├── config/configManager.ts    # Settings persistence (%APPDATA%)
 ├── stratz/
-│   ├── stratzClient.ts        # STRATZ GraphQL client
-│   ├── topsonAnalyzer.ts      # Topson match data analysis
+│   ├── stratzClient.ts        # STRATZ GraphQL client with timeouts/retries
+│   ├── topsonAnalyzer.ts      # Topson match & pro guide analyzer
 │   └── queries.ts             # GraphQL queries
 ├── gsi/
-│   ├── gsiServer.ts           # GSI HTTP server and Dashboard APIs
+│   ├── gsiServer.ts           # GSI HTTP server (localhost-only)
 │   └── gsiTypes.ts            # TypeScript types for GSI
 ├── coaching/
 │   ├── coachingEngine.ts      # Main coaching engine
@@ -117,10 +115,6 @@ src/
 │   └── kezStrategy.ts
 ├── voice/voiceOutput.ts       # Offline Piper & OneCore TTS manager
 └── tray/trayApp.ts            # System tray UI controller
-public/
-├── dashboard.html             # Draft Web Page
-├── dashboard.js               # Web UI controller
-└── dashboard.css              # Custom layout styles
 ```
 
 ## License

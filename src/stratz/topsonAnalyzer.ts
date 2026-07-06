@@ -39,17 +39,54 @@ export class TopsonAnalyzer {
     console.log(`[TOPSON] Fetching ${heroName} match data from STRATZ...`);
 
     try {
-      const matches = await this.stratz.fetchPlayerMatches(TOPSON_STEAM_ID, [heroId], take);
+      let matches = await this.stratz.fetchTopsonMatches([heroId], 15);
 
-      if (!matches || matches.length === 0) {
-        console.log(`[TOPSON] No parsed matches found for ${heroName}`);
-        return null;
+      const topsonPlayedMatches = (matches || []).filter((m: any) =>
+        m.players?.some((p: any) => p.steamAccountId === TOPSON_STEAM_ID)
+      );
+
+      let isGuideMode = false;
+
+      if (topsonPlayedMatches.length < 3) {
+        console.log(`[TOPSON] Topson has < 3 valid matches on ${heroName} (${topsonPlayedMatches.length} found). Fetching Pro Guides instead...`);
+        const guides = await this.stratz.fetchHeroGuides(heroId, 5);
+
+        if (!guides || guides.length === 0) {
+          console.log(`[TOPSON] No Pro Guides or Topson matches found for ${heroName}`);
+          return null;
+        }
+
+        const matchDetails: any[] = [];
+        // Fetch match details in parallel to bypass complexity limits
+        await Promise.all(
+          guides.map(async (g) => {
+            try {
+              const m = await this.stratz.fetchMatchDetails(g.matchId);
+              if (m) {
+                m.guideSteamAccountId = g.steamAccountId; // attach guide player ID
+                matchDetails.push(m);
+              }
+            } catch (err) {
+              console.error(`[TOPSON] Failed to fetch guide match ${g.matchId}:`, err);
+            }
+          })
+        );
+
+        if (matchDetails.length === 0) {
+          console.log(`[TOPSON] Failed to retrieve details for any guide matches on ${heroName}`);
+          return null;
+        }
+
+        matches = matchDetails;
+        isGuideMode = true;
       }
 
       const profile = this.buildProfile(heroId, heroName, matches);
+      profile.isGuideMode = isGuideMode;
       this.profileCache.set(heroId, profile);
 
-      console.log(`[TOPSON] Analyzed ${profile.matchesAnalyzed} matches for ${heroName}`);
+      const modeStr = isGuideMode ? 'Pro Guides' : 'Topson';
+      console.log(`[TOPSON] Analyzed ${profile.matchesAnalyzed} matches for ${heroName} (${modeStr} Mode)`);
       console.log(`[TOPSON]   Win rate: ${(profile.winRate * 100).toFixed(1)}%`);
       console.log(`[TOPSON]   Avg KDA: ${profile.avgKills.toFixed(1)}/${profile.avgDeaths.toFixed(1)}/${profile.avgAssists.toFixed(1)}`);
       console.log(`[TOPSON]   Avg GPM: ${profile.avgGPM.toFixed(0)}, XPM: ${profile.avgXPM.toFixed(0)}`);
@@ -103,39 +140,56 @@ export class TopsonAnalyzer {
     let totalKills = 0, totalDeaths = 0, totalAssists = 0;
     let totalGPM = 0, totalXPM = 0, totalDuration = 0;
     let wins = 0;
-
-    // Filter to victory matches only, falling back to all matches if no wins are present
-    const victoryMatches = matches.filter(m => {
-      const p = m.players?.find((pl: any) => pl.steamAccountId === TOPSON_STEAM_ID);
-      return p && p.isVictory;
-    });
-    const targetMatches = victoryMatches.length > 0 ? victoryMatches : matches;
+    let totalMatchesWithPlayer = 0;
 
     const validMatches: any[] = [];
+
+    // First, pass through all matches to compute winrate and average stats
+    for (const match of matches) {
+      const targetSteamId = match.guideSteamAccountId || TOPSON_STEAM_ID;
+      const player = match.players?.find(
+        (p: any) => p.steamAccountId === targetSteamId
+      );
+      if (!player) continue;
+
+      totalMatchesWithPlayer++;
+      totalKills += player.kills || 0;
+      totalDeaths += player.deaths || 0;
+      totalAssists += player.assists || 0;
+      totalGPM += player.goldPerMinute || 0;
+      totalXPM += player.experiencePerMinute || 0;
+      totalDuration += match.durationSeconds || 0;
+      if (player.isVictory) wins++;
+
+      validMatches.push(match);
+    }
+
+    const winRate = totalMatchesWithPlayer > 0 ? wins / totalMatchesWithPlayer : 0;
+    const n = totalMatchesWithPlayer || 1;
+
+    // Filter to victory matches only for starting items and item timings
+    const victoryMatches = validMatches.filter(m => {
+      const targetSteamId = m.guideSteamAccountId || TOPSON_STEAM_ID;
+      const p = m.players?.find((pl: any) => pl.steamAccountId === targetSteamId);
+      return p && p.isVictory;
+    });
+    // Fall back to all valid matches if there are no wins in the sample
+    const itemAnalysisMatches = victoryMatches.length > 0 ? victoryMatches : validMatches;
 
     // Collect all item purchases across matches
     const itemPurchasesByItem: Map<number, number[]> = new Map(); // itemId → [time1, time2, ...]
     const buildOrders: number[][] = [];
     const startingItemCounts: Map<number, number> = new Map(); // itemId → count
 
-    for (const match of targetMatches) {
-      // Find Topson's player entry
-      const topsonPlayer = match.players?.find(
-        (p: any) => p.steamAccountId === TOPSON_STEAM_ID
+    for (const match of itemAnalysisMatches) {
+      const targetSteamId = match.guideSteamAccountId || TOPSON_STEAM_ID;
+      const player = match.players?.find(
+        (p: any) => p.steamAccountId === targetSteamId
       );
-      if (!topsonPlayer) continue;
-
-      validMatches.push(match);
-      totalKills += topsonPlayer.kills || 0;
-      totalDeaths += topsonPlayer.deaths || 0;
-      totalAssists += topsonPlayer.assists || 0;
-      totalGPM += topsonPlayer.goldPerMinute || 0;
-      totalXPM += topsonPlayer.experiencePerMinute || 0;
-      totalDuration += match.durationSeconds || 0;
-      if (topsonPlayer.isVictory) wins++;
+      if (!player) continue;
 
       // Extract item purchases with timings
-      const purchases = topsonPlayer.stats?.itemPurchases;
+      const purchases = player.stats?.itemPurchases;
       if (Array.isArray(purchases)) {
         const matchBuildOrder: number[] = [];
 
@@ -163,8 +217,6 @@ export class TopsonAnalyzer {
       }
     }
 
-    const n = validMatches.length || 1;
-
     // Build item timing benchmarks
     const itemTimings: TopsonItemTiming[] = [];
     for (const [itemId, times] of itemPurchasesByItem.entries()) {
@@ -182,8 +234,8 @@ export class TopsonAnalyzer {
         averageTime: avg,
         earliestTime: earliest,
         matchCount: times.length,
-        totalMatches: validMatches.length,
-        purchaseRate: times.length / validMatches.length,
+        totalMatches: itemAnalysisMatches.length,
+        purchaseRate: times.length / itemAnalysisMatches.length,
       });
     }
 
@@ -195,7 +247,7 @@ export class TopsonAnalyzer {
 
     // Format starting items (those bought in at least 30% of games)
     const startingItems: string[] = [];
-    const minMatchesForStartingItem = Math.max(1, Math.round(validMatches.length * 0.3));
+    const minMatchesForStartingItem = Math.max(1, Math.round(itemAnalysisMatches.length * 0.3));
 
     // Sort starting items by frequency
     const sortedStartingItems = Array.from(startingItemCounts.entries())
@@ -205,7 +257,7 @@ export class TopsonAnalyzer {
     for (const [itemId, count] of sortedStartingItems) {
       const displayName = this.stratz.getItemName(itemId);
       if (displayName && displayName !== `Item #${itemId}`) {
-        const avgCount = Math.round(count / validMatches.length);
+        const avgCount = Math.round(count / itemAnalysisMatches.length);
         let name = displayName;
         if (avgCount > 1) {
           if (name.toLowerCase().includes('branch')) {
@@ -223,8 +275,8 @@ export class TopsonAnalyzer {
     return {
       heroId,
       heroName,
-      matchesAnalyzed: validMatches.length,
-      winRate: wins / n,
+      matchesAnalyzed: totalMatchesWithPlayer,
+      winRate,
       avgKills: totalKills / n,
       avgDeaths: totalDeaths / n,
       avgAssists: totalAssists / n,
@@ -270,17 +322,17 @@ export class TopsonAnalyzer {
 
     // 2. Allowed minor finished items
     const allowedMinorItems = [
-      'bottle',
-      'magic_wand',
-      'boots',
-      'power_treads',
-      'phase_boots',
-      'arcane_boots',
-      'tranquil_boots',
-      'ultimate_scepter_2',
-      'aghanims_shard'
+      'item_bottle',
+      'item_magic_wand',
+      'item_boots',
+      'item_power_treads',
+      'item_phase_boots',
+      'item_arcane_boots',
+      'item_tranquil_boots',
+      'item_ultimate_scepter_2',
+      'item_aghanims_shard'
     ];
-    if (allowedMinorItems.some(i => name.includes(i))) {
+    if (allowedMinorItems.includes(name)) {
       return true;
     }
 
