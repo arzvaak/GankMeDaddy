@@ -26,18 +26,19 @@ const PRIORITY_ORDER: Record<RecommendationPriority, number> = {
 export class VoiceOutput {
   private enabled: boolean;
   private rate: number;
+  private volume: number;
   private queue: QueueEntry[] = [];
   private speaking: boolean = false;
-  private cooldowns: Map<string, number> = new Map(); // key → expiry timestamp
+  private cooldowns: Map<string, number> = new Map();
   private activeProcess: any = null;
 
-  // Piper paths
   private readonly piperExe = path.resolve(__dirname, '../../bin/piper/piper.exe');
   private readonly piperModel = path.resolve(__dirname, '../../bin/piper/en_GB-jenny_dioco-medium.onnx');
 
-  constructor(enabled: boolean = true, rate: number = 1.0) {
+  constructor(enabled: boolean = true, rate: number = 1.0, volume: number = 80) {
     this.enabled = enabled;
     this.rate = rate === 1.0 ? 1.0 : rate;
+    this.volume = Math.max(0, Math.min(100, volume));
   }
 
   /**
@@ -57,6 +58,20 @@ export class VoiceOutput {
    */
   setRate(rate: number): void {
     this.rate = Math.max(0.5, Math.min(2.0, rate));
+  }
+
+  /**
+   * Set volume level (0-100). 0 = mute, 100 = max.
+   */
+  setVolume(volume: number): void {
+    this.volume = Math.max(0, Math.min(100, volume));
+  }
+
+  /**
+   * Get current volume level.
+   */
+  getVolume(): number {
+    return this.volume;
   }
 
   /**
@@ -199,7 +214,6 @@ export class VoiceOutput {
     const lengthScale = (1.15 / this.rate).toFixed(2);
 
     try {
-      // 1. Run piper.exe to generate the high-quality WAV
       const piper = spawn(this.piperExe, [
         '--model', this.piperModel,
         '--output_file', tempWav,
@@ -212,34 +226,41 @@ export class VoiceOutput {
       piper.stdin.end();
 
       piper.on('close', (code) => {
-        // If this.activeProcess is no longer the piper child process, it was intentionally terminated.
         if (this.activeProcess !== piper) {
           try { fs.unlinkSync(tempWav); } catch (e) {}
-          return; // Do NOT trigger fallback speech or execute callback
+          return;
         }
 
         if (code !== 0) {
           console.error(`[VOICE] Piper process exited with code ${code}`);
           try { fs.unlinkSync(tempWav); } catch (e) {}
-          // Gracefully fall back to standard TTS on failure
           this.playFallbackSpeech(text, callback);
           return;
         }
 
-        // 2. Play the generated WAV file via SoundPlayer
-        const player = exec(`powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -Command "$player = New-Object System.Media.SoundPlayer '${tempWav}'; $player.PlaySync()"`, (err) => {
-          const wasInterrupted = this.activeProcess !== player;
-          if (this.activeProcess === player) {
+        const psCmd = 'powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -Command "' +
+          'Add-Type -AssemblyName System.Runtime.WindowsRuntime; ' +
+          '$vol = [double]' + this.volume + ' / 100.0; ' +
+          '$player = New-Object Windows.Media.Playback.MediaPlayer; ' +
+          '$player.Volume = $vol; ' +
+          '$player.Source = [Windows.Media.Core.MediaSource]::CreateFromUri((New-Object System.Uri (\'file:///' + tempWav + '\'))); ' +
+          '$player.Play(); ' +
+          'Start-Sleep -Milliseconds 500; ' +
+          'while ($player.PlaybackSession.Position.TotalSeconds -lt ($player.PlaybackSession.NaturalDuration.TotalSeconds - 0.2)) { Start-Sleep -Milliseconds 100 }; ' +
+          '$player.Dispose()"';
+
+        const proc = exec(psCmd, () => {
+          const wasInterrupted = this.activeProcess !== proc;
+          if (this.activeProcess === proc) {
             this.activeProcess = null;
           }
-          // Cleanup WAV
           try { fs.unlinkSync(tempWav); } catch (e) {}
           if (!wasInterrupted) {
             callback();
           }
         });
 
-        this.activeProcess = player;
+        this.activeProcess = proc;
       });
 
       piper.on('error', (err) => {
@@ -286,6 +307,8 @@ if (-not $voice) {
 if ($voice) {
     $synth.Voice = $voice
 }
+
+$synth.Volume = ${this.volume}
 
 $text = $args[0]
 if ($voice.DisplayName -notlike "*Natural*" -and $voice.DisplayName -notlike "*Sonia*") {

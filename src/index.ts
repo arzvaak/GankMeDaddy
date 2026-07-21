@@ -68,7 +68,7 @@ async function main() {
   // -------------------------------------------------------------------------
   // 3. Initialize Voice Output
   // -------------------------------------------------------------------------
-  const voice = new VoiceOutput(cfg.voiceEnabled, cfg.voiceRate);
+  const voice = new VoiceOutput(cfg.voiceEnabled, cfg.voiceRate, cfg.voiceVolume);
 
   // -------------------------------------------------------------------------
   // 4. Initialize GSI Server
@@ -126,6 +126,16 @@ async function main() {
       config.update({ voiceEnabled: newState });
       voice.setEnabled(newState);
       console.log(`[TRAY] Voice: ${newState ? 'ON' : 'OFF'}`);
+    },
+    onAdjustVolume: (delta: number) => {
+      const newCfg = config.get();
+      const newVol = Math.max(0, Math.min(100, newCfg.voiceVolume + delta));
+      config.update({ voiceVolume: newVol });
+      voice.setVolume(newVol);
+      console.log(`[TRAY] Volume: ${newVol}%`);
+      if (delta > 0) {
+        voice.speakNow(`Volume ${newVol} percent.`);
+      }
     },
     onSetupGSI: () => {
       setupGSIConfig(config);

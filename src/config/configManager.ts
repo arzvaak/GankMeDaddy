@@ -27,6 +27,8 @@ export interface AppConfig {
   voiceEnabled: boolean;
   /** TTS speech rate (0.5 to 2.0) */
   voiceRate: number;
+  /** TTS volume (0-100) */
+  voiceVolume: number;
   /** Dota 2 installation path */
   dota2Path: string;
   /** GSI server port */
@@ -44,6 +46,7 @@ const DEFAULT_CONFIG: AppConfig = {
   aggressionLevel: 10,
   voiceEnabled: true,
   voiceRate: 1.0,
+  voiceVolume: 80,
   dota2Path: 'D:\\Programs\\Steam\\steamapps\\common\\dota 2 beta',
   gsiPort: 3001,
   stratzPollInterval: 10,

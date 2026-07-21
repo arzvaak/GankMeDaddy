@@ -11,6 +11,11 @@ import { HERO_NAMES, SUPPORTED_HERO_IDS, Role } from '../coaching/types';
 
 const TRAY_ICON_B64 = 'AAABAAEAEBAAAAEAIABoBAAAFgAAACgAAAAQAAAAIAAAAAEAIAAAAAAAAAQAABMLAAATCwAAAAAAAAAAAAD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A/2oA//9qAP//agD/////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD/agD//2oA//9qAP//agD//2oA//9qAP////8A////AP///wD///8A////AP///wD///8A////AP9qAP//agD//2oA//9qAP//agD//2oA//9qAP//agD/////AP///wD///8A////AP///wD///8A/2oA//9qAP//agD//2oA//9qAP//agD//2oA//9qAP//agD//2oA/////wD///8A////AP///wD/agD//2oA//9qAP//agD//2oA//9qAP//agD//2oA//9qAP//agD//2oA//9qAP////8A////AP///wD/agD//2oA//9qAP//agD//2oA//9qAP//agD//2oA//9qAP//agD//2oA//9qAP////8A////AP///wD/agD//2oA//9qAP//agD//2oA//9qAP//agD//2oA//9qAP//agD//2oA//9qAP////8A////AP///wD/agD//2oA//9qAP//agD//2oA//9qAP//agD//2oA//9qAP//agD//2oA//9qAP////8A////AP///wD///8A/2oA//9qAP//agD//2oA//9qAP//agD//2oA//9qAP//agD//2oA/////wD///8A////AP///wD///8A////AP9qAP//agD//2oA//9qAP//agD//2oA//9qAP//agD/////AP///wD///8A////AP///wD///8A////AP///wD/agD//2oA//9qAP//agD//2oA//9qAP////8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP9qAP//agD//2oA/////wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==';
 
+function volumeBar(vol: number): string {
+  const filled = Math.round(vol / 10);
+  return '▰'.repeat(filled) + '○'.repeat(10 - filled);
+}
+
 const POSITION_LABELS: Record<Role, string> = {
   mid: 'Mid',
   pos1: 'Safe Lane (Pos 1)',
@@ -25,6 +30,7 @@ export interface TrayCallbacks {
   onToggleHero: (heroId: number) => void;
   onSetPosition: (role: Role) => void;
   onToggleVoice: () => void;
+  onAdjustVolume: (delta: number) => void;
   onSetupGSI: () => void;
   onTestVoice: () => void;
   onQuit: () => void;
@@ -68,6 +74,9 @@ export class TrayApp {
       { title: '─────────────', tooltip: '', enabled: false, checked: false },
       { title: `Voice: ${cfg.voiceEnabled ? 'ON' : 'OFF'}`, tooltip: 'Toggle voice', enabled: true, checked: false },
       { title: `Aggression: ${cfg.aggressionLevel}/10`, tooltip: 'Aggression level', enabled: false, checked: false },
+      { title: `Volume: ${volumeBar(cfg.voiceVolume)} ${cfg.voiceVolume}%`, tooltip: 'Current volume level', enabled: false, checked: false },
+      { title: '▲ Volume Up', tooltip: 'Increase volume by 10', enabled: true, checked: false },
+      { title: '▼ Volume Down', tooltip: 'Decrease volume by 10', enabled: true, checked: false },
       { title: '─────────────', tooltip: '', enabled: false, checked: false },
       { title: 'Setup GSI Config', tooltip: 'Copy GSI config to Dota 2', enabled: true, checked: false },
       { title: 'Test Voice', tooltip: 'Test TTS output', enabled: true, checked: false },
@@ -135,12 +144,18 @@ export class TrayApp {
       }
 
       const voiceIdx = posEnd + 2;
-      const setupIdx = voiceIdx + 3;
-      const testIdx = voiceIdx + 4;
-      const quitIdx = voiceIdx + 6;
+      const volUpIdx = voiceIdx + 3;
+      const volDownIdx = voiceIdx + 4;
+      const setupIdx = voiceIdx + 6;
+      const testIdx = voiceIdx + 7;
+      const quitIdx = voiceIdx + 9;
 
       if (idx === voiceIdx) {
         this.callbacks.onToggleVoice();
+      } else if (idx === volUpIdx) {
+        this.callbacks.onAdjustVolume(10);
+      } else if (idx === volDownIdx) {
+        this.callbacks.onAdjustVolume(-10);
       } else if (idx === setupIdx) {
         this.callbacks.onSetupGSI();
       } else if (idx === testIdx) {
