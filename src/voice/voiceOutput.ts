@@ -238,20 +238,9 @@ export class VoiceOutput {
           return;
         }
 
-        const psCmd = 'powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -Command "' +
-          'Add-Type -AssemblyName System.Runtime.WindowsRuntime; ' +
-          '$vol = [double]' + this.volume + ' / 100.0; ' +
-          '$player = New-Object Windows.Media.Playback.MediaPlayer; ' +
-          '$player.Volume = $vol; ' +
-          '$player.Source = [Windows.Media.Core.MediaSource]::CreateFromUri((New-Object System.Uri (\'file:///' + tempWav + '\'))); ' +
-          '$player.Play(); ' +
-          'Start-Sleep -Milliseconds 500; ' +
-          'while ($player.PlaybackSession.Position.TotalSeconds -lt ($player.PlaybackSession.NaturalDuration.TotalSeconds - 0.2)) { Start-Sleep -Milliseconds 100 }; ' +
-          '$player.Dispose()"';
-
-        const proc = exec(psCmd, () => {
-          const wasInterrupted = this.activeProcess !== proc;
-          if (this.activeProcess === proc) {
+        const player = exec(`powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -Command "$player = New-Object System.Media.SoundPlayer '${tempWav}'; $player.PlaySync()"`, (err) => {
+          const wasInterrupted = this.activeProcess !== player;
+          if (this.activeProcess === player) {
             this.activeProcess = null;
           }
           try { fs.unlinkSync(tempWav); } catch (e) {}
@@ -260,7 +249,7 @@ export class VoiceOutput {
           }
         });
 
-        this.activeProcess = proc;
+        this.activeProcess = player;
       });
 
       piper.on('error', (err) => {
