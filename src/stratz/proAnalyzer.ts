@@ -1,79 +1,77 @@
 // ============================================================================
-// GankMeDaddy — Topson Data Analyzer
-// Fetches and analyzes Topson's real match data from STRATZ to derive
+// GankMeDaddy — Pro Data Analyzer
+// Fetches and analyzes pro player match data from STRATZ to derive
 // item timing benchmarks, KDA patterns, and playstyle metrics per hero.
 // ============================================================================
 
 import { StratzClient } from './stratzClient';
 import {
-  TopsonHeroProfile,
-  TopsonItemTiming,
+  ProHeroProfile,
+  ProItemTiming,
   HERO_NAMES,
   SUPPORTED_HERO_IDS,
 } from '../coaching/types';
 
-const TOPSON_STEAM_ID = 94054712;
+const PRO_STEAM_ID = 94054712;
 
 /**
- * Analyzes Topson's actual STRATZ match data to build coaching benchmarks.
+ * Analyzes pro player STRATZ match data to build coaching benchmarks.
  */
-export class TopsonAnalyzer {
+export class ProAnalyzer {
   private stratz: StratzClient;
-  private profileCache: Map<number, TopsonHeroProfile> = new Map();
+  private profileCache: Map<number, ProHeroProfile> = new Map();
 
   constructor(stratz: StratzClient) {
     this.stratz = stratz;
   }
 
   /**
-   * Fetch and analyze Topson's matches for a specific hero.
+   * Fetch and analyze pro matches for a specific hero.
    * Caches the result for the session.
    */
-  async analyzeHero(heroId: number, take: number = 25): Promise<TopsonHeroProfile | null> {
-    // Return cached if available
+  async analyzeHero(heroId: number, take: number = 25): Promise<ProHeroProfile | null> {
     if (this.profileCache.has(heroId)) {
       return this.profileCache.get(heroId)!;
     }
 
     const heroName = HERO_NAMES[heroId] || `Hero ${heroId}`;
-    console.log(`[TOPSON] Fetching ${heroName} match data from STRATZ...`);
+    console.log(`[PRO] Fetching ${heroName} match data from STRATZ...`);
 
     try {
-      let matches = await this.stratz.fetchTopsonMatches([heroId], 15);
+      let matches = await this.stratz.fetchProMatches([heroId], 15);
 
-      const topsonPlayedMatches = (matches || []).filter((m: any) =>
-        m.players?.some((p: any) => p.steamAccountId === TOPSON_STEAM_ID)
+      const proPlayedMatches = (matches || []).filter((m: any) =>
+        m.players?.some((p: any) => p.steamAccountId === PRO_STEAM_ID)
       );
 
       let isGuideMode = false;
 
-      if (topsonPlayedMatches.length < 3) {
-        console.log(`[TOPSON] Topson has < 3 valid matches on ${heroName} (${topsonPlayedMatches.length} found). Fetching Pro Guides instead...`);
+      if (proPlayedMatches.length < 3) {
+        console.log(`[PRO] < 3 pro matches on ${heroName} (${proPlayedMatches.length} found). Fetching STRATZ Pro Guides instead...`);
         const guides = await this.stratz.fetchHeroGuides(heroId, 5);
 
         if (!guides || guides.length === 0) {
-          console.log(`[TOPSON] No Pro Guides or Topson matches found for ${heroName}`);
+          console.log(`[PRO] No Pro Guides or pro matches found for ${heroName}`);
           return null;
         }
 
         const matchDetails: any[] = [];
-        // Fetch match details in parallel to bypass complexity limits
         await Promise.all(
           guides.map(async (g) => {
             try {
               const m = await this.stratz.fetchMatchDetails(g.matchId);
               if (m) {
-                m.guideSteamAccountId = g.steamAccountId; // attach guide player ID
+                m.guideSteamAccountId = g.steamAccountId;
                 matchDetails.push(m);
               }
             } catch (err) {
-              console.error(`[TOPSON] Failed to fetch guide match ${g.matchId}:`, err);
+              console.error(`[PRO] Failed to fetch guide match ${g.matchId}:`, err);
             }
           })
         );
 
         if (matchDetails.length === 0) {
-          console.log(`[TOPSON] Failed to retrieve details for any guide matches on ${heroName}`);
+          console.log(`[PRO] Failed to retrieve details for any guide matches on ${heroName}`);
           return null;
         }
 
@@ -85,26 +83,26 @@ export class TopsonAnalyzer {
       profile.isGuideMode = isGuideMode;
       this.profileCache.set(heroId, profile);
 
-      const modeStr = isGuideMode ? 'Pro Guides' : 'Topson';
-      console.log(`[TOPSON] Analyzed ${profile.matchesAnalyzed} matches for ${heroName} (${modeStr} Mode)`);
-      console.log(`[TOPSON]   Win rate: ${(profile.winRate * 100).toFixed(1)}%`);
-      console.log(`[TOPSON]   Avg KDA: ${profile.avgKills.toFixed(1)}/${profile.avgDeaths.toFixed(1)}/${profile.avgAssists.toFixed(1)}`);
-      console.log(`[TOPSON]   Avg GPM: ${profile.avgGPM.toFixed(0)}, XPM: ${profile.avgXPM.toFixed(0)}`);
+      const modeStr = isGuideMode ? 'Pro Guides' : 'Pro matches';
+      console.log(`[PRO] Analyzed ${profile.matchesAnalyzed} matches for ${heroName} (${modeStr})`);
+      console.log(`[PRO]   Win rate: ${(profile.winRate * 100).toFixed(1)}%`);
+      console.log(`[PRO]   Avg KDA: ${profile.avgKills.toFixed(1)}/${profile.avgDeaths.toFixed(1)}/${profile.avgAssists.toFixed(1)}`);
+      console.log(`[PRO]   Avg GPM: ${profile.avgGPM.toFixed(0)}, XPM: ${profile.avgXPM.toFixed(0)}`);
       if (profile.startingItems.length > 0) {
-        console.log(`[TOPSON]   Usual starting items: ${profile.startingItems.join(', ')}`);
+        console.log(`[PRO]   Usual starting items: ${profile.startingItems.join(', ')}`);
       }
       if (profile.itemTimings.length > 0) {
-        console.log(`[TOPSON]   Key item timings:`);
+        console.log(`[PRO]   Key item timings:`);
         for (const it of profile.itemTimings.slice(0, 8)) {
           const mins = Math.floor(it.medianTime / 60);
           const secs = Math.floor(it.medianTime % 60);
-          console.log(`[TOPSON]     ${it.itemName}: ~${mins}:${secs.toString().padStart(2, '0')} (${(it.purchaseRate * 100).toFixed(0)}% of games)`);
+          console.log(`[PRO]     ${it.itemName}: ~${mins}:${secs.toString().padStart(2, '0')} (${(it.purchaseRate * 100).toFixed(0)}% of games)`);
         }
       }
 
       return profile;
     } catch (err) {
-      console.error(`[TOPSON] Failed to analyze ${heroName}:`, (err as Error).message);
+      console.error(`[PRO] Failed to analyze ${heroName}:`, (err as Error).message);
       return null;
     }
   }
@@ -114,21 +112,20 @@ export class TopsonAnalyzer {
    */
   async preloadAllHeroes(heroIds?: number[]): Promise<void> {
     const ids = heroIds || SUPPORTED_HERO_IDS;
-    console.log(`[TOPSON] Pre-loading data for ${ids.length} heroes...`);
+    console.log(`[PRO] Pre-loading data for ${ids.length} heroes...`);
 
     for (const heroId of ids) {
       await this.analyzeHero(heroId);
-      // Small delay to respect rate limits
       await new Promise(resolve => setTimeout(resolve, 500));
     }
 
-    console.log(`[TOPSON] Pre-load complete. Cached ${this.profileCache.size} hero profiles.`);
+    console.log(`[PRO] Pre-load complete. Cached ${this.profileCache.size} hero profiles.`);
   }
 
   /**
-   * Get cached profile for a hero (returns null if not yet loaded).
+   * Get cached profile for a hero.
    */
-  getProfile(heroId: number): TopsonHeroProfile | null {
+  getProfile(heroId: number): ProHeroProfile | null {
     return this.profileCache.get(heroId) || null;
   }
 
@@ -136,7 +133,7 @@ export class TopsonAnalyzer {
   // Private analysis methods
   // -------------------------------------------------------------------------
 
-  private buildProfile(heroId: number, heroName: string, matches: any[]): TopsonHeroProfile {
+  private buildProfile(heroId: number, heroName: string, matches: any[]): ProHeroProfile {
     let totalKills = 0, totalDeaths = 0, totalAssists = 0;
     let totalGPM = 0, totalXPM = 0, totalDuration = 0;
     let wins = 0;
@@ -144,9 +141,8 @@ export class TopsonAnalyzer {
 
     const validMatches: any[] = [];
 
-    // First, pass through all matches to compute winrate and average stats
     for (const match of matches) {
-      const targetSteamId = match.guideSteamAccountId || TOPSON_STEAM_ID;
+      const targetSteamId = match.guideSteamAccountId || PRO_STEAM_ID;
       const player = match.players?.find(
         (p: any) => p.steamAccountId === targetSteamId
       );
@@ -167,28 +163,24 @@ export class TopsonAnalyzer {
     const winRate = totalMatchesWithPlayer > 0 ? wins / totalMatchesWithPlayer : 0;
     const n = totalMatchesWithPlayer || 1;
 
-    // Filter to victory matches only for starting items and item timings
     const victoryMatches = validMatches.filter(m => {
-      const targetSteamId = m.guideSteamAccountId || TOPSON_STEAM_ID;
+      const targetSteamId = m.guideSteamAccountId || PRO_STEAM_ID;
       const p = m.players?.find((pl: any) => pl.steamAccountId === targetSteamId);
       return p && p.isVictory;
     });
-    // Fall back to all valid matches if there are no wins in the sample
     const itemAnalysisMatches = victoryMatches.length > 0 ? victoryMatches : validMatches;
 
-    // Collect all item purchases across matches
-    const itemPurchasesByItem: Map<number, number[]> = new Map(); // itemId → [time1, time2, ...]
+    const itemPurchasesByItem: Map<number, number[]> = new Map();
     const buildOrders: number[][] = [];
-    const startingItemCounts: Map<number, number> = new Map(); // itemId → count
+    const startingItemCounts: Map<number, number> = new Map();
 
     for (const match of itemAnalysisMatches) {
-      const targetSteamId = match.guideSteamAccountId || TOPSON_STEAM_ID;
+      const targetSteamId = match.guideSteamAccountId || PRO_STEAM_ID;
       const player = match.players?.find(
         (p: any) => p.steamAccountId === targetSteamId
       );
       if (!player) continue;
 
-      // Extract item purchases with timings
       const purchases = player.stats?.itemPurchases;
       if (Array.isArray(purchases)) {
         const matchBuildOrder: number[] = [];
@@ -196,12 +188,10 @@ export class TopsonAnalyzer {
         for (const purchase of purchases) {
           if (!purchase.itemId || purchase.time == null) continue;
 
-          // Track starting items (time <= 0)
           if (purchase.time <= 0) {
             startingItemCounts.set(purchase.itemId, (startingItemCounts.get(purchase.itemId) || 0) + 1);
           }
 
-          // Focus exclusively on major finished core items
           if (purchase.itemId !== 0 && !this.isFinishedCoreItem(purchase.itemId)) continue;
 
           if (!itemPurchasesByItem.has(purchase.itemId)) {
@@ -217,10 +207,9 @@ export class TopsonAnalyzer {
       }
     }
 
-    // Build item timing benchmarks
-    const itemTimings: TopsonItemTiming[] = [];
+    const itemTimings: ProItemTiming[] = [];
     for (const [itemId, times] of itemPurchasesByItem.entries()) {
-      if (times.length < 2) continue; // Need at least 2 data points
+      if (times.length < 2) continue;
 
       const sorted = [...times].sort((a, b) => a - b);
       const median = sorted[Math.floor(sorted.length / 2)];
@@ -239,17 +228,13 @@ export class TopsonAnalyzer {
       });
     }
 
-    // Sort by median purchase time (earliest items first)
     itemTimings.sort((a, b) => a.medianTime - b.medianTime);
 
-    // Derive typical build order from most common sequence
     const typicalBuildOrder = this.deriveTypicalBuildOrder(buildOrders, itemTimings);
 
-    // Format starting items (those bought in at least 30% of games)
     const startingItems: string[] = [];
     const minMatchesForStartingItem = Math.max(1, Math.round(itemAnalysisMatches.length * 0.3));
 
-    // Sort starting items by frequency
     const sortedStartingItems = Array.from(startingItemCounts.entries())
       .filter(([_, count]) => count >= minMatchesForStartingItem)
       .sort((a, b) => b[1] - a[1]);
@@ -261,7 +246,7 @@ export class TopsonAnalyzer {
         let name = displayName;
         if (avgCount > 1) {
           if (name.toLowerCase().includes('branch')) {
-            name = `${name}es`; // Iron Branches
+            name = `${name}es`;
           } else {
             name = `${name}s`;
           }
@@ -280,7 +265,7 @@ export class TopsonAnalyzer {
       avgKills: totalKills / n,
       avgDeaths: totalDeaths / n,
       avgAssists: totalAssists / n,
-      avgLastHits10: null, // Would need per-minute breakdowns
+      avgLastHits10: null,
       avgGPM: totalGPM / n,
       avgXPM: totalXPM / n,
       itemTimings,
@@ -290,26 +275,18 @@ export class TopsonAnalyzer {
     };
   }
 
-  /**
-   * Derive the most typical build order by frequency analysis.
-   * Returns the most common first N items across all build orders.
-   */
   private deriveTypicalBuildOrder(
     buildOrders: number[][],
-    itemTimings: TopsonItemTiming[]
+    itemTimings: ProItemTiming[]
   ): number[] {
     if (buildOrders.length === 0) return [];
 
-    // Use item timings sorted by median time — items bought >30% of the time
     return itemTimings
       .filter(it => it.purchaseRate >= 0.3)
-      .slice(0, 10) // Top 10 most consistent items
+      .slice(0, 10)
       .map(it => it.itemId);
   }
 
-  /**
-   * Determine if an item is a finished core item (skipping recipes and raw components).
-   */
   private isFinishedCoreItem(itemId: number): boolean {
     const itemInfo = this.stratz.getItemCache().get(itemId);
     if (!itemInfo) return false;
@@ -317,10 +294,8 @@ export class TopsonAnalyzer {
     const name = itemInfo.name.toLowerCase();
     const cost = itemInfo.cost;
 
-    // 1. Skip recipes
     if (name.includes('recipe')) return false;
 
-    // 2. Allowed minor finished items
     const allowedMinorItems = [
       'item_bottle',
       'item_magic_wand',
@@ -336,7 +311,6 @@ export class TopsonAnalyzer {
       return true;
     }
 
-    // 3. Exclude raw components
     const rawComponents = [
       'belt_of_strength',
       'boots_of_elves',
@@ -379,13 +353,11 @@ export class TopsonAnalyzer {
       return false;
     }
 
-    // 4. Exclude early game cheap stat items (Bracer, Wraith Band, Null Talisman)
     const cheapStatItems = ['bracer', 'wraith_band', 'null_talisman'];
     if (cheapStatItems.some(item => name.includes(item))) {
       return false;
     }
 
-    // 5. Must cost at least 1700 gold to be considered a major core item
     return cost >= 1700;
   }
 }

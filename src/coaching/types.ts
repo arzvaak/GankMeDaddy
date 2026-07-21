@@ -10,7 +10,88 @@ export const HERO_IDS = {
   QUEEN_OF_PAIN: 39,
   ZEUS: 22,
   KEZ: 145,
+  CRYSTAL_MAIDEN: 5,
+  LICH: 31,
+  WITCH_DOCTOR: 30,
+  WARLOCK: 37,
+  DISRUPTOR: 87,
+  DAZZLE: 50,
+  SHADOW_SHAMAN: 27,
+  JAKIRO: 64,
+  ORACLE: 111,
+  RUBICK: 86,
+  LION: 26,
+  HOODWINK: 123,
+  EARTH_SPIRIT: 107,
+  TUSK: 100,
+  PHOENIX: 110,
+  NYX_ASSASSIN: 88,
+  CLOCKWERK: 51,
+  AXE: 2,
+  TIDEHUNTER: 29,
+  SAND_KING: 16,
+  CENTAUR: 96,
+  MARS: 129,
+  DAWNBREAKER: 135,
+  PRIMAL_BEAST: 137,
+  PHANTOM_ASSASSIN: 44,
+  FACELESS_VOID: 41,
+  SPECTRE: 67,
+  LUNA: 48,
+  JUGGERNAUT: 8,
+  MORPHLING: 10,
+  TROLL_WARLORD: 95,
 } as const;
+
+export type Role = 'mid' | 'pos1' | 'pos3' | 'pos4' | 'pos5';
+
+export const HERO_ROLES: Partial<Record<number, Role>> = {
+  // Mid heroes
+  [HERO_IDS.VOID_SPIRIT]: 'mid',
+  [HERO_IDS.SNIPER]: 'mid',
+  [HERO_IDS.SHADOW_FIEND]: 'mid',
+  [HERO_IDS.EMBER_SPIRIT]: 'mid',
+  [HERO_IDS.STORM_SPIRIT]: 'mid',
+  [HERO_IDS.MONKEY_KING]: 'mid',
+  [HERO_IDS.QUEEN_OF_PAIN]: 'mid',
+  [HERO_IDS.ZEUS]: 'mid',
+  [HERO_IDS.KEZ]: 'mid',
+  // Pos 5 (hard support)
+  [HERO_IDS.CRYSTAL_MAIDEN]: 'pos5',
+  [HERO_IDS.LICH]: 'pos5',
+  [HERO_IDS.WITCH_DOCTOR]: 'pos5',
+  [HERO_IDS.WARLOCK]: 'pos5',
+  [HERO_IDS.DISRUPTOR]: 'pos5',
+  [HERO_IDS.DAZZLE]: 'pos5',
+  [HERO_IDS.SHADOW_SHAMAN]: 'pos5',
+  [HERO_IDS.JAKIRO]: 'pos5',
+  [HERO_IDS.ORACLE]: 'pos5',
+  // Pos 4 (soft support)
+  [HERO_IDS.RUBICK]: 'pos4',
+  [HERO_IDS.LION]: 'pos4',
+  [HERO_IDS.HOODWINK]: 'pos4',
+  [HERO_IDS.EARTH_SPIRIT]: 'pos4',
+  [HERO_IDS.TUSK]: 'pos4',
+  [HERO_IDS.PHOENIX]: 'pos4',
+  [HERO_IDS.NYX_ASSASSIN]: 'pos4',
+  [HERO_IDS.CLOCKWERK]: 'pos4',
+  // Pos 3 (offlane)
+  [HERO_IDS.AXE]: 'pos3',
+  [HERO_IDS.TIDEHUNTER]: 'pos3',
+  [HERO_IDS.SAND_KING]: 'pos3',
+  [HERO_IDS.CENTAUR]: 'pos3',
+  [HERO_IDS.MARS]: 'pos3',
+  [HERO_IDS.DAWNBREAKER]: 'pos3',
+  [HERO_IDS.PRIMAL_BEAST]: 'pos3',
+  // Pos 1 (safelane carry)
+  [HERO_IDS.PHANTOM_ASSASSIN]: 'pos1',
+  [HERO_IDS.FACELESS_VOID]: 'pos1',
+  [HERO_IDS.SPECTRE]: 'pos1',
+  [HERO_IDS.LUNA]: 'pos1',
+  [HERO_IDS.JUGGERNAUT]: 'pos1',
+  [HERO_IDS.MORPHLING]: 'pos1',
+  [HERO_IDS.TROLL_WARLORD]: 'pos1',
+};
 
 export const HERO_NAMES: Record<number, string> = {};
 for (const h of DOTA_HEROES) {
@@ -20,12 +101,12 @@ for (const h of DOTA_HEROES) {
 export const SUPPORTED_HERO_IDS = Object.values(HERO_IDS) as number[];
 
 // ---------------------------------------------------------------------------
-// Topson reference data (fetched from STRATZ)
+// Pro player reference data (fetched from STRATZ)
 // ---------------------------------------------------------------------------
-export interface TopsonItemTiming {
+export interface ProItemTiming {
   itemId: number;
   itemName: string;
-  /** Median purchase time in seconds from game start across Topson's recent matches */
+  /** Median purchase time in seconds from game start across pro matches */
   medianTime: number;
   /** Average purchase time in seconds */
   averageTime: number;
@@ -39,7 +120,7 @@ export interface TopsonItemTiming {
   purchaseRate: number;
 }
 
-export interface TopsonHeroProfile {
+export interface ProHeroProfile {
   heroId: number;
   heroName: string;
   /** Number of matches analyzed */
@@ -59,7 +140,7 @@ export interface TopsonHeroProfile {
   /** Average XP per minute */
   avgXPM: number;
   /** Item timing benchmarks — ordered by median purchase time */
-  itemTimings: TopsonItemTiming[];
+  itemTimings: ProItemTiming[];
   /** Most common item build order (item IDs in purchase sequence) */
   typicalBuildOrder: number[];
   /** Most common starting items (item names) */
@@ -129,7 +210,7 @@ export interface BuildingSnapshot {
 }
 
 export interface StratzContext {
-  topsonProfile: TopsonHeroProfile | null;
+  proProfile: ProHeroProfile | null;
   userRecentMatches: number; // how many recent user matches were found for this hero
   userWinRate: number | null;
 }
@@ -155,6 +236,8 @@ export interface MatchSnapshot {
   buildings: BuildingSnapshot[];
   /** Pre-fetched STRATZ context for the current hero */
   stratzContext: StratzContext;
+  /** Detected role (mid, pos4, pos5) based on hero */
+  role: Role;
 }
 
 // ---------------------------------------------------------------------------
@@ -173,7 +256,10 @@ export type RecommendationCategory =
   | 'power_spike'
   | 'death'
   | 'farming'
-  | 'mana';
+  | 'mana'
+  | 'warding'
+  | 'stacking'
+  | 'save';
 
 export interface CoachingRecommendation {
   priority: RecommendationPriority;
@@ -194,7 +280,7 @@ export interface HeroStrategy {
   heroName: string;
   /**
    * Analyze the current match snapshot and return hero-specific coaching advice.
-   * General mid-lane advice (runes, etc.) is handled by the coaching engine itself.
+   * General role-based advice (runes, wards, etc.) is handled by the coaching engine itself.
    */
   analyzeSnapshot(snapshot: MatchSnapshot): CoachingRecommendation[];
 }

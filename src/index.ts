@@ -22,7 +22,7 @@ console.log('[INIT] STRATZ_API_TOKEN loaded ✓');
 
 import { ConfigManager } from './config/configManager';
 import { StratzClient } from './stratz/stratzClient';
-import { TopsonAnalyzer } from './stratz/topsonAnalyzer';
+import { ProAnalyzer } from './stratz/proAnalyzer';
 import { GSIServer } from './gsi/gsiServer';
 import { MatchTracker } from './coaching/matchTracker';
 import { CoachingEngine } from './coaching/coachingEngine';
@@ -35,7 +35,7 @@ async function main() {
   console.log('╔══════════════════════════════════════════╗');
   console.log('║     🎮 GankMeDaddy v1.0                  ║');
   console.log('║     Dota 2 Live Mid Coach                ║');
-  console.log('║     Topson Mode: ACTIVATED               ║');
+  console.log('║     Pro Benchmark Mode                   ║');
   console.log('╚══════════════════════════════════════════╝');
   console.log('');
 
@@ -50,21 +50,16 @@ async function main() {
   console.log(`[INIT] Voice: ${cfg.voiceEnabled ? 'ON' : 'OFF'}`);
   console.log(`[INIT] Dota 2 path: ${cfg.dota2Path}`);
 
-  // -------------------------------------------------------------------------
-  // 2. Initialize STRATZ Client + Topson Analyzer
-  // -------------------------------------------------------------------------
   const stratz = new StratzClient({ apiToken: STRATZ_API_TOKEN });
 
-  // Initialize Topson analyzer and preload hero data
-  const topson = new TopsonAnalyzer(stratz);
+  const pro = new ProAnalyzer(stratz);
 
-  // Load item constants and preload enabled heroes in the background so startup is non-blocking
   (async () => {
     try {
       console.log('[INIT] Loading item constants from STRATZ...');
       await stratz.loadItemConstants();
-      console.log('[INIT] Pre-loading Topson/Guide match data from STRATZ...');
-      await topson.preloadAllHeroes(cfg.enabledHeroIds);
+      console.log('[INIT] Pre-loading pro match data from STRATZ...');
+      await pro.preloadAllHeroes(cfg.enabledHeroIds);
     } catch (err) {
       console.error('[INIT] Background STRATZ preloading failed:', err);
     }
@@ -84,12 +79,12 @@ async function main() {
   // -------------------------------------------------------------------------
   // 5. Initialize Match Tracker + Coaching Engine
   // -------------------------------------------------------------------------
-  const tracker = new MatchTracker(gsi, stratz, topson, config);
+  const tracker = new MatchTracker(gsi, stratz, pro, config);
   const coach = new CoachingEngine(voice);
 
   tracker.on('matchStart', (heroId: number) => {
     const context = tracker.getStratzContext();
-    const profile = context?.topsonProfile;
+    const profile = context?.proProfile;
     const isGuideMode = profile?.isGuideMode || false;
     const hasData = !!profile;
     coach.onMatchStart(heroId, isGuideMode, hasData);
@@ -113,10 +108,9 @@ async function main() {
       const enabled = config.toggleHero(heroId);
       const heroName = HERO_NAMES[heroId] || `Hero ${heroId}`;
       console.log(`[TRAY] ${heroName}: ${enabled ? 'enabled' : 'disabled'}`);
-      // Pre-load Topson data for newly enabled hero
       if (enabled) {
-        topson.analyzeHero(heroId).catch(err =>
-          console.error(`Failed to load Topson data for ${heroName}:`, err)
+        pro.analyzeHero(heroId).catch(err =>
+          console.error(`Failed to load pro data for ${heroName}:`, err)
         );
       }
     },
@@ -148,7 +142,7 @@ async function main() {
     tray.updateStatus(`Hero: ${heroName}`);
     const cfg = config.get();
     if (cfg.enabledHeroIds.includes(heroId)) {
-      voice.speakNow(`${heroName} detected. Loading Topson data.`);
+      voice.speakNow(`${heroName} detected. Loading pro data.`);
     } else {
       voice.speakNow(`${heroName} detected. Loading STRATZ guide data.`);
     }

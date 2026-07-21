@@ -5,6 +5,7 @@
 
 import express from 'express';
 import { EventEmitter } from 'events';
+import { Server as HttpServer } from 'http';
 import { GameState } from './gsiTypes';
 
 export interface GSIServerOptions {
@@ -14,7 +15,7 @@ export interface GSIServerOptions {
 export class GSIServer extends EventEmitter {
   private app: express.Application;
   private port: number;
-  private server: any;
+  private server: HttpServer | null = null;
   private lastGameState: string = ''; // track to detect game start/end
   private connected: boolean = false;
 

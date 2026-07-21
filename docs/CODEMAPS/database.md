@@ -11,7 +11,6 @@ GankMeDaddy stores active user preferences, selected hero lists, voice states, a
 
 The application saves user config settings in the local OS user data directory:
 - **Path**: `%APPDATA%\gankmedaddy\config.json`
-- **Fallback**: `./config.json` (if `%APPDATA%` is inaccessible)
 
 ---
 
@@ -21,7 +20,6 @@ The application saves user config settings in the local OS user data directory:
 export interface AppConfig {
   configVersion: number;       // Current Schema Version (e.g. 2)
   dota2Path: string;           // Path to Steam/Dota 2 folder
-  stratzToken: string;         // Personal STRATZ API Token
   voiceEnabled: boolean;       // Global Speech Announcer flag
   voiceRate: number;           // Playback speech rate multiplier (0.5 to 2.0)
   aggressionLevel: number;     // Configured coach aggression index (1 to 10)

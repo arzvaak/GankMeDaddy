@@ -7,7 +7,7 @@ import fetch from 'node-fetch';
 import { PLAYER_MATCHES_QUERY, MATCH_DETAILS_QUERY, ITEM_CONSTANTS_QUERY, HERO_GUIDES_QUERY } from './queries';
 
 const STRATZ_GRAPHQL_URL = 'https://api.stratz.com/graphql';
-const TOPSON_STEAM_ID = 94054712;
+export const PRO_STEAM_ID = 94054712;
 
 export interface StratzClientOptions {
   apiToken: string;
@@ -129,10 +129,10 @@ export class StratzClient {
   }
 
   /**
-   * Fetch Topson's recent matches on specific heroes.
+   * Fetch pro player's recent matches on specific heroes.
    */
-  async fetchTopsonMatches(heroIds: number[], take: number = 25): Promise<any> {
-    return this.fetchPlayerMatches(TOPSON_STEAM_ID, heroIds, take);
+  async fetchProMatches(heroIds: number[], take: number = 25): Promise<any> {
+    return this.fetchPlayerMatches(PRO_STEAM_ID, heroIds, take);
   }
 
   /**

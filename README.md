@@ -1,17 +1,17 @@
 # 🎮 GankMeDaddy — Dota 2 Live Mid Coaching Agent
 
-A lightweight Windows 11 system tray application that provides **real-time voice coaching** for mid lane play, using **Topson's actual match data** and STRATZ pro guides as benchmarks.
+A lightweight Windows 11 system tray application that provides **real-time voice coaching** for mid lane play, using **pro player match data** and STRATZ pro guides as benchmarks.
 
 ## Features
 
 - 🎯 **Real-time voice coaching** via offline high-quality neural Piper TTS with standard OneCore Speech fallback.
-- 📊 **Data-driven benchmarks** from Topson's actual STRATZ match history and STRATZ pro guides (item timings, GPM, KDA).
+- 📊 **Data-driven benchmarks** from pro player STRATZ match history and STRATZ pro guides (item timings, GPM, KDA).
 - 🎮 **Dota 2 Game State Integration** for live game telemetry (HP, mana, gold, items, abilities), locked down locally to `127.0.0.1`.
 - 🏆 **9 mid heroes** with dedicated, robust strategy modules.
 - 🔀 **Dynamic Build-Path Branching** — Automatically detects physical/magical item trajectories and filters advice dynamically.
 - 🛡️ **Enemy Counter Briefings** — Pre-game analysis and counter tips for dangerous opponent heroes.
 - ⏱️ **Rune/Lotus/Shrine timers** with voice reminders.
-- 📈 **Creep score checkpoints** at 10/20/30 min vs Topson's pace.
+- 📈 **Creep score checkpoints** at 10/20/30 min vs pro player pace.
 - 🔊 **Priority-based TTS queue** with interrupt protection and cooldown deduplication.
 - ⚙️ **Lightweight System Tray** — Toggle hero pools, voice switch, setup GSI, or close the application.
 
@@ -57,7 +57,7 @@ npm start
 
 The app will:
 1. Initialize GSI Server on port 3001 (listening on localhost `127.0.0.1` only).
-2. Load configuration and pre-fetch Topson's match data/STRATZ guides for enabled heroes in the background.
+2. Load configuration and pre-fetch pro match data/STRATZ guides for enabled heroes in the background.
 3. Show the system tray icon with status alerts.
 
 ---
@@ -76,7 +76,7 @@ Dota 2 Client (GSI) ───► GSIServer (Port 3001, localhost)
 
 1. **Dota 2 GSI** sends real-time game state to `127.0.0.1:3001` every 0.5s.
 2. **Match Tracker** converts GSI data into normalized snapshots.
-3. **STRATZ Topson Analyzer** provides real item timing benchmarks from Topson's matches or fallback pro guides.
+3.    **STRATZ Pro Analyzer** provides real item timing benchmarks from pro matches or fallback pro guides.
 4. **Coaching Engine** evaluates general, build-path, counter, and hero-specific rules.
 5. **Voice Output** plays speech via Windows SAPI or neural Piper TTS with queue deduplication.
 
@@ -92,7 +92,7 @@ src/
 ├── config/configManager.ts    # Settings persistence (%APPDATA%)
 ├── stratz/
 │   ├── stratzClient.ts        # STRATZ GraphQL client with timeouts/retries
-│   ├── topsonAnalyzer.ts      # Topson match & pro guide analyzer
+│   ├── proAnalyzer.ts         # Pro match & guide analyzer
 │   └── queries.ts             # GraphQL queries
 ├── gsi/
 │   ├── gsiServer.ts           # GSI HTTP server (localhost-only)

@@ -7,7 +7,7 @@ import { EventEmitter } from 'events';
 import { GameState } from '../gsi/gsiTypes';
 import { GSIServer } from '../gsi/gsiServer';
 import { StratzClient } from '../stratz/stratzClient';
-import { TopsonAnalyzer } from '../stratz/topsonAnalyzer';
+import { ProAnalyzer } from '../stratz/proAnalyzer';
 import { ConfigManager } from '../config/configManager';
 import {
   MatchSnapshot,
@@ -18,12 +18,14 @@ import {
   AbilitySlot,
   BuildingSnapshot,
   StratzContext,
+  Role,
+  HERO_ROLES,
 } from './types';
 
 export class MatchTracker extends EventEmitter {
   private gsi: GSIServer;
   private stratz: StratzClient;
-  private topson: TopsonAnalyzer;
+  private pro: ProAnalyzer;
   private config: ConfigManager;
 
   private inMatch: boolean = false;
@@ -34,13 +36,13 @@ export class MatchTracker extends EventEmitter {
   constructor(
     gsi: GSIServer,
     stratz: StratzClient,
-    topson: TopsonAnalyzer,
+    pro: ProAnalyzer,
     config: ConfigManager
   ) {
     super();
     this.gsi = gsi;
     this.stratz = stratz;
-    this.topson = topson;
+    this.pro = pro;
     this.config = config;
 
     this.setupListeners();
@@ -109,7 +111,7 @@ export class MatchTracker extends EventEmitter {
       this.emit('matchEnd');
     });
 
-    this.gsi.on('gameStateUpdate', (state: GameState) => {
+    this.gsi.on('gameStateUpdate', async (state: GameState) => {
       const gs = state.map?.game_state;
       if (!state.map || (gs !== 'DOTA_GAMERULES_STATE_GAME_IN_PROGRESS' && gs !== 'DOTA_GAMERULES_STATE_PRE_GAME')) {
         return;
@@ -118,7 +120,7 @@ export class MatchTracker extends EventEmitter {
       // Detect hero if not yet known
       if (!this.currentHeroId && state.hero?.id) {
         this.currentHeroId = state.hero.id;
-        this.loadStratzContext(this.currentHeroId);
+        await this.loadStratzContext(this.currentHeroId);
       }
 
       // Build snapshot
@@ -133,7 +135,7 @@ export class MatchTracker extends EventEmitter {
   private async loadStratzContext(heroId: number): Promise<void> {
     if (!heroId || heroId <= 0) {
       this.stratzContext = {
-        topsonProfile: null,
+        proProfile: null,
         userRecentMatches: 0,
         userWinRate: null,
       };
@@ -142,8 +144,7 @@ export class MatchTracker extends EventEmitter {
 
     console.log(`[TRACKER] Loading STRATZ context for hero ${heroId}...`);
 
-    // Get Topson's profile (may already be cached from preload or will load on-demand)
-    const topsonProfile = await this.topson.analyzeHero(heroId);
+    const proProfile = await this.pro.analyzeHero(heroId);
 
     // Fetch user's own recent matches on this hero
     let userRecentMatches = 0;
@@ -175,12 +176,12 @@ export class MatchTracker extends EventEmitter {
     }
 
     this.stratzContext = {
-      topsonProfile,
+      proProfile,
       userRecentMatches,
       userWinRate,
     };
 
-    console.log(`[TRACKER] STRATZ context loaded. Topson/Guide data: ${topsonProfile ? 'yes' : 'no'}, User matches: ${userRecentMatches}`);
+    console.log(`[TRACKER] STRATZ context loaded. Pro/Guide data: ${proProfile ? 'yes' : 'no'}, User matches: ${userRecentMatches}`);
   }
 
   private buildSnapshot(state: GameState): MatchSnapshot | null {
@@ -189,10 +190,14 @@ export class MatchTracker extends EventEmitter {
     const gameTime = state.map.game_time;
     const clockTime = state.map.clock_time;
 
-    // Determine game phase
+    const role: Role = HERO_ROLES[state.hero.id || this.currentHeroId] || 'mid';
+
+    const MIDGAME_THRESHOLD = 600;
+    const LATEGAME_THRESHOLD = 1500;
+
     let phase: GamePhase = 'laning';
-    if (clockTime > 1500) phase = 'lategame';     // 25 min
-    else if (clockTime > 600) phase = 'midgame';   // 10 min
+    if (clockTime > LATEGAME_THRESHOLD) phase = 'lategame';
+    else if (clockTime > MIDGAME_THRESHOLD) phase = 'midgame';
 
     // Build player snapshot
     const player: PlayerSnapshot = {
@@ -299,13 +304,14 @@ export class MatchTracker extends EventEmitter {
       items,
       abilities,
       buildings,
-      stratzContext: (this.stratzContext && this.stratzContext.topsonProfile?.heroId === hero.heroId)
+      stratzContext: (this.stratzContext && this.stratzContext.proProfile?.heroId === hero.heroId)
         ? this.stratzContext
         : {
-            topsonProfile: null,
+            proProfile: null,
             userRecentMatches: 0,
             userWinRate: null,
           },
+      role,
     };
   }
 }

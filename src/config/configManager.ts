@@ -21,7 +21,7 @@ export interface AppConfig {
   steamAccountId: number;
   /** Hero IDs that are enabled for coaching */
   enabledHeroIds: number[];
-  /** Aggression level 1-10 (10 = full Topson mode) */
+  /** Aggression level 1-10 (10 = most aggressive) */
   aggressionLevel: number;
   /** Whether voice coaching is enabled */
   voiceEnabled: boolean;
