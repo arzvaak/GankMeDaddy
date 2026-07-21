@@ -1,21 +1,21 @@
 # External Integrations Codemap
 
-**Last Updated:** 2026-07-06
+**Last Updated:** 2026-07-21
 **Entry Points:**
 - [src/stratz/stratzClient.ts](file:///d:/GankMeDaddy/src/stratz/stratzClient.ts)
 - [src/voice/voiceOutput.ts](file:///d:/GankMeDaddy/src/voice/voiceOutput.ts)
 
-This codemap covers external communication layers: the STRATZ GraphQL client (pro matches), Steam GSI (Dota client link), and the custom Offline TTS player (neural synthesis).
+This codemap covers external communication layers: the STRATZ GraphQL client (pro matches), Steam GSI (Dota client link), and the custom offline TTS player (neural synthesis with fallback).
 
 ---
 
 ## 1. STRATZ API GraphQL Client
 
-GankMeDaddy queries the STRATZ API to compile statistical baselines for Topson's gameplay.
+GankMeDaddy queries the STRATZ API to compile statistical baselines for pro gameplay.
 
 ### Architecture
 - **GraphQL Client** ([src/stratz/stratzClient.ts](file:///d:/GankMeDaddy/src/stratz/stratzClient.ts)): Runs raw GraphQL queries using standard fetch.
-- **Topson Analyzer** ([src/stratz/topsonAnalyzer.ts](file:///d:/GankMeDaddy/src/stratz/topsonAnalyzer.ts)): Iterates through historical match profiles to compute:
+- **Pro Analyzer** ([src/stratz/proAnalyzer.ts](file:///d:/GankMeDaddy/src/stratz/proAnalyzer.ts)): Iterates through historical match profiles to compute:
   - Median timings for all primary items.
   - Average GPM and XP/Min for the targeted hero.
   - Creep score multipliers.
@@ -50,10 +50,15 @@ Voice announcements are processed locally and offline to prevent latency or depe
           |     playPiperSpeech   |   |   playFallbackSpeech  |
           +-----------------------+   +-----------------------+
           | 1. Spawn Piper process|   | 1. Write PS1 script   |
-          | 2. Generate Temp WAV  |   | 2. Spawn Powershell   |
-          | 3. Play WAV Sync      |   | 3. Synthesize & Play  |
+          | 2. Generate Temp WAV  |   | 2. Set $synth.Volume  |
+          | 3. SoundPlayer.Play   |   | 3. Synthesize & Play  |
           +-----------------------+   +-----------------------+
 ```
+
+- **Volume Control**: `VoiceOutput` constructor accepts `enabled`, `rate`, and `volume` (0–100, default 80). Volume is stored in config as `voiceVolume`.
+  - **Piper path**: Plays via `System.Media.SoundPlayer.PlaySync()` (no native volume — plays at system level).
+  - **OneCore fallback**: Sets `$synth.Volume = ${this.volume}` in the PowerShell script before synthesis.
+- **`setVolume(volume)` / `getVolume()`**: Clamp to 0–100 range.
 
 ### Safety Features
 - **Interrupt Protection**: To stop overlapping audio, the engine terminates running pipelines forcefully using `taskkill /f /t /pid` before spawning new statements.

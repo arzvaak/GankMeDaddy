@@ -1,16 +1,16 @@
 # Data Config & Persistence Codemap
 
-**Last Updated:** 2026-07-06
+**Last Updated:** 2026-07-21
 **Entry Point:** [src/config/configManager.ts](file:///d:/GankMeDaddy/src/config/configManager.ts)
 
-GankMeDaddy stores active user preferences, selected hero lists, voice states, and system paths in a structured JSON configuration file.
+GankMeDaddy stores active user preferences, selected hero lists, voice states, position override, and system paths in a structured JSON configuration file.
 
 ---
 
 ## 1. Config Manager & Storage Location
 
 The application saves user config settings in the local OS user data directory:
-- **Path**: `%APPDATA%\gankmedaddy\config.json`
+- **Path**: `%APPDATA%\GankMeDaddy\config.json`
 
 ---
 
@@ -19,12 +19,16 @@ The application saves user config settings in the local OS user data directory:
 ```typescript
 export interface AppConfig {
   configVersion: number;       // Current Schema Version (e.g. 2)
-  dota2Path: string;           // Path to Steam/Dota 2 folder
+  steamAccountId: number;      // User's Steam account ID
+  enabledHeroIds: number[];    // Hero IDs loaded by GankMeDaddy for coaching
+  aggressionLevel: number;     // Configured coach aggression index (1 to 10)
   voiceEnabled: boolean;       // Global Speech Announcer flag
   voiceRate: number;           // Playback speech rate multiplier (0.5 to 2.0)
-  aggressionLevel: number;     // Configured coach aggression index (1 to 10)
-  enabledHeroIds: number[];    // Hero IDs loaded by GankMeDaddy for coaching
+  voiceVolume: number;         // TTS volume (0-100, default 80)
+  dota2Path: string;           // Path to Steam/Dota 2 folder
   gsiPort: number;             // Port bound to GSI Express server (default: 3001)
+  stratzPollInterval: number;  // How often to poll STRATZ for pre-game data (seconds)
+  position: Role;              // Manual position override: 'mid' | 'pos1' | 'pos3' | 'pos4' | 'pos5'
 }
 ```
 
@@ -39,6 +43,8 @@ To avoid configuration corruption when updating hero pools (e.g., adding Kez, ID
 - If missing or equal to `1`, updates the schema version to `2`.
 - Verifies if Kez (ID `145`) is present in `enabledHeroIds`. If absent, automatically appends `145` to the list.
 - Persists the updated JSON file safely back to the user directory.
+
+New fields (`voiceVolume`, `position`, `steamAccountId`, `stratzPollInterval`) are handled by merging loaded config with `DEFAULT_CONFIG`, so they automatically receive defaults on first run after update.
 
 ---
 
