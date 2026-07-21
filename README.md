@@ -152,4 +152,4 @@ src/
 
 ## License
 
-Private use only. Built for George Popescu.
+Licensed under the [GNU General Public License v3.0](LICENSE).
