@@ -7,7 +7,7 @@ import SysTray from 'systray2';
 import * as path from 'path';
 import * as fs from 'fs';
 import { ConfigManager } from '../config/configManager';
-import { HERO_NAMES, SUPPORTED_HERO_IDS, Role } from '../coaching/types';
+import { Role } from '../coaching/types';
 
 const TRAY_ICON_B64 = 'AAABAAEAEBAAAAEAIABoBAAAFgAAACgAAAAQAAAAIAAAAAEAIAAAAAAAAAQAABMLAAATCwAAAAAAAAAAAAD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A/2oA//9qAP//agD/////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD/agD//2oA//9qAP//agD//2oA//9qAP////8A////AP///wD///8A////AP///wD///8A////AP9qAP//agD//2oA//9qAP//agD//2oA//9qAP//agD/////AP///wD///8A////AP///wD///8A/2oA//9qAP//agD//2oA//9qAP//agD//2oA//9qAP//agD//2oA/////wD///8A////AP///wD/agD//2oA//9qAP//agD//2oA//9qAP//agD//2oA//9qAP//agD//2oA//9qAP////8A////AP///wD/agD//2oA//9qAP//agD//2oA//9qAP//agD//2oA//9qAP//agD//2oA//9qAP////8A////AP///wD/agD//2oA//9qAP//agD//2oA//9qAP//agD//2oA//9qAP//agD//2oA//9qAP////8A////AP///wD/agD//2oA//9qAP//agD//2oA//9qAP//agD//2oA//9qAP//agD//2oA//9qAP////8A////AP///wD///8A/2oA//9qAP//agD//2oA//9qAP//agD//2oA//9qAP//agD//2oA/////wD///8A////AP///wD///8A////AP9qAP//agD//2oA//9qAP//agD//2oA//9qAP//agD/////AP///wD///8A////AP///wD///8A////AP///wD/agD//2oA//9qAP//agD//2oA//9qAP////8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP9qAP//agD//2oA/////wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==';
 
@@ -50,13 +50,6 @@ export class TrayApp {
   start(): void {
     const cfg = this.config.get();
 
-    const heroMenuItems = SUPPORTED_HERO_IDS.map((heroId) => ({
-      title: `${cfg.enabledHeroIds.includes(heroId) ? '☑' : '☐'} ${HERO_NAMES[heroId]}`,
-      tooltip: `Toggle ${HERO_NAMES[heroId]}`,
-      checked: cfg.enabledHeroIds.includes(heroId),
-      enabled: true,
-    }));
-
     const positionItems = POSITION_ORDER.map((role) => ({
       title: `${cfg.position === role ? '●' : '○'} ${POSITION_LABELS[role]}`,
       tooltip: `Set position to ${POSITION_LABELS[role]}`,
@@ -66,9 +59,6 @@ export class TrayApp {
 
     const menuItems = [
       { title: `Status: ${this.statusText}`, tooltip: 'Current status', enabled: false, checked: false },
-      { title: '─────────────', tooltip: '', enabled: false, checked: false },
-      ...heroMenuItems,
-      { title: '─────────────', tooltip: '', enabled: false, checked: false },
       { title: `Position: ${POSITION_LABELS[cfg.position]}`, tooltip: 'Current position', enabled: false, checked: false },
       ...positionItems,
       { title: '─────────────', tooltip: '', enabled: false, checked: false },
@@ -107,48 +97,37 @@ export class TrayApp {
 
     this.systray.onClick(action => {
       const idx = action.seq_id;
-      const heroCount = SUPPORTED_HERO_IDS.length;
 
       // 0: status
-      // 1: separator
-      // 2 .. 2+heroCount-1: heroes
-      // 2+heroCount: separator
-      // 2+heroCount+1: "Position: X" label
-      // 2+heroCount+2 .. 2+heroCount+6: position options (5 items)
-      // 2+heroCount+7: separator
-      // 2+heroCount+8: voice
-      // 2+heroCount+9: aggression
-      // 2+heroCount+10: separator
-      // 2+heroCount+11: setup GSI
-      // 2+heroCount+12: test voice
-      // 2+heroCount+13: separator
-      // 2+heroCount+14: quit
+      // 1: "Position: X" label
+      // 2..6: position options (5 items)
+      // 7: separator
+      // 8: voice toggle
+      // 9: aggression
+      // 10: volume display
+      // 11: volume up
+      // 12: volume down
+      // 13: separator
+      // 14: setup GSI
+      // 15: test voice
+      // 16: separator
+      // 17: quit
 
-      const heroStart = 2;
-      const heroEnd = heroStart + heroCount - 1;
-
-      if (idx >= heroStart && idx <= heroEnd) {
-        const heroId = SUPPORTED_HERO_IDS[idx - heroStart];
-        this.callbacks.onToggleHero(heroId);
-        return;
-      }
-
-      const posLabelIdx = heroEnd + 2;
-      const posStart = posLabelIdx + 1;
+      const posStart = 1;
       const posEnd = posStart + POSITION_ORDER.length - 1;
 
-      if (idx >= posStart && idx <= posEnd) {
-        const role = POSITION_ORDER[idx - posStart];
+      if (idx >= 2 && idx <= posEnd) {
+        const role = POSITION_ORDER[idx - 2];
         this.callbacks.onSetPosition(role);
         return;
       }
 
-      const voiceIdx = posEnd + 2;
-      const volUpIdx = voiceIdx + 3;
-      const volDownIdx = voiceIdx + 4;
-      const setupIdx = voiceIdx + 6;
-      const testIdx = voiceIdx + 7;
-      const quitIdx = voiceIdx + 9;
+      const voiceIdx = 8;
+      const volUpIdx = 11;
+      const volDownIdx = 12;
+      const setupIdx = 14;
+      const testIdx = 15;
+      const quitIdx = 17;
 
       if (idx === voiceIdx) {
         this.callbacks.onToggleVoice();
