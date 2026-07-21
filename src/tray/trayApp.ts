@@ -7,13 +7,23 @@ import SysTray from 'systray2';
 import * as path from 'path';
 import * as fs from 'fs';
 import { ConfigManager } from '../config/configManager';
-import { HERO_NAMES, SUPPORTED_HERO_IDS } from '../coaching/types';
+import { HERO_NAMES, SUPPORTED_HERO_IDS, Role } from '../coaching/types';
 
-// Base64 encoded minimal 16x16 ICO (red/orange dot icon)
 const TRAY_ICON_B64 = 'AAABAAEAEBAAAAEAIABoBAAAFgAAACgAAAAQAAAAIAAAAAEAIAAAAAAAAAQAABMLAAATCwAAAAAAAAAAAAD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A/2oA//9qAP//agD/////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD/agD//2oA//9qAP//agD//2oA//9qAP////8A////AP///wD///8A////AP///wD///8A////AP9qAP//agD//2oA//9qAP//agD//2oA//9qAP//agD/////AP///wD///8A////AP///wD///8A/2oA//9qAP//agD//2oA//9qAP//agD//2oA//9qAP//agD//2oA/////wD///8A////AP///wD/agD//2oA//9qAP//agD//2oA//9qAP//agD//2oA//9qAP//agD//2oA//9qAP////8A////AP///wD/agD//2oA//9qAP//agD//2oA//9qAP//agD//2oA//9qAP//agD//2oA//9qAP////8A////AP///wD/agD//2oA//9qAP//agD//2oA//9qAP//agD//2oA//9qAP//agD//2oA//9qAP////8A////AP///wD/agD//2oA//9qAP//agD//2oA//9qAP//agD//2oA//9qAP//agD//2oA//9qAP////8A////AP///wD///8A/2oA//9qAP//agD//2oA//9qAP//agD//2oA//9qAP//agD//2oA/////wD///8A////AP///wD///8A////AP9qAP//agD//2oA//9qAP//agD//2oA//9qAP//agD/////AP///wD///8A////AP///wD///8A////AP///wD/agD//2oA//9qAP//agD//2oA//9qAP////8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP9qAP//agD//2oA/////wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AP///wD///8A////AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==';
+
+const POSITION_LABELS: Record<Role, string> = {
+  mid: 'Mid',
+  pos1: 'Safe Lane (Pos 1)',
+  pos3: 'Off Lane (Pos 3)',
+  pos4: 'Soft Support (Pos 4)',
+  pos5: 'Hard Support (Pos 5)',
+};
+
+const POSITION_ORDER: Role[] = ['mid', 'pos1', 'pos3', 'pos4', 'pos5'];
 
 export interface TrayCallbacks {
   onToggleHero: (heroId: number) => void;
+  onSetPosition: (role: Role) => void;
   onToggleVoice: () => void;
   onSetupGSI: () => void;
   onTestVoice: () => void;
@@ -31,16 +41,20 @@ export class TrayApp {
     this.callbacks = callbacks;
   }
 
-  /**
-   * Start the system tray application.
-   */
   start(): void {
     const cfg = this.config.get();
 
-    const heroMenuItems = SUPPORTED_HERO_IDS.map((heroId, idx) => ({
+    const heroMenuItems = SUPPORTED_HERO_IDS.map((heroId) => ({
       title: `${cfg.enabledHeroIds.includes(heroId) ? '☑' : '☐'} ${HERO_NAMES[heroId]}`,
       tooltip: `Toggle ${HERO_NAMES[heroId]}`,
       checked: cfg.enabledHeroIds.includes(heroId),
+      enabled: true,
+    }));
+
+    const positionItems = POSITION_ORDER.map((role) => ({
+      title: `${cfg.position === role ? '●' : '○'} ${POSITION_LABELS[role]}`,
+      tooltip: `Set position to ${POSITION_LABELS[role]}`,
+      checked: cfg.position === role,
       enabled: true,
     }));
 
@@ -48,6 +62,9 @@ export class TrayApp {
       { title: `Status: ${this.statusText}`, tooltip: 'Current status', enabled: false, checked: false },
       { title: '─────────────', tooltip: '', enabled: false, checked: false },
       ...heroMenuItems,
+      { title: '─────────────', tooltip: '', enabled: false, checked: false },
+      { title: `Position: ${POSITION_LABELS[cfg.position]}`, tooltip: 'Current position', enabled: false, checked: false },
+      ...positionItems,
       { title: '─────────────', tooltip: '', enabled: false, checked: false },
       { title: `Voice: ${cfg.voiceEnabled ? 'ON' : 'OFF'}`, tooltip: 'Toggle voice', enabled: true, checked: false },
       { title: `Aggression: ${cfg.aggressionLevel}/10`, tooltip: 'Aggression level', enabled: false, checked: false },
@@ -72,7 +89,7 @@ export class TrayApp {
       menu: {
         icon: trayIcon,
         title: 'GankMeDaddy',
-        tooltip: 'GankMeDaddy — Dota 2 Mid Coach',
+        tooltip: 'GankMeDaddy — Dota 2 Coach',
         items: menuItems,
       },
       debug: false,
@@ -83,18 +100,20 @@ export class TrayApp {
       const idx = action.seq_id;
       const heroCount = SUPPORTED_HERO_IDS.length;
 
-      // Menu layout:
-      // 0: status (disabled)
+      // 0: status
       // 1: separator
-      // 2 to 2+heroCount-1: hero toggles
+      // 2 .. 2+heroCount-1: heroes
       // 2+heroCount: separator
-      // 2+heroCount+1: voice toggle
-      // 2+heroCount+2: aggression display
-      // 2+heroCount+3: separator
-      // 2+heroCount+4: setup GSI
-      // 2+heroCount+5: test voice
-      // 2+heroCount+6: separator
-      // 2+heroCount+7: quit
+      // 2+heroCount+1: "Position: X" label
+      // 2+heroCount+2 .. 2+heroCount+6: position options (5 items)
+      // 2+heroCount+7: separator
+      // 2+heroCount+8: voice
+      // 2+heroCount+9: aggression
+      // 2+heroCount+10: separator
+      // 2+heroCount+11: setup GSI
+      // 2+heroCount+12: test voice
+      // 2+heroCount+13: separator
+      // 2+heroCount+14: quit
 
       const heroStart = 2;
       const heroEnd = heroStart + heroCount - 1;
@@ -102,13 +121,31 @@ export class TrayApp {
       if (idx >= heroStart && idx <= heroEnd) {
         const heroId = SUPPORTED_HERO_IDS[idx - heroStart];
         this.callbacks.onToggleHero(heroId);
-      } else if (idx === heroEnd + 2) {
+        return;
+      }
+
+      const posLabelIdx = heroEnd + 2;
+      const posStart = posLabelIdx + 1;
+      const posEnd = posStart + POSITION_ORDER.length - 1;
+
+      if (idx >= posStart && idx <= posEnd) {
+        const role = POSITION_ORDER[idx - posStart];
+        this.callbacks.onSetPosition(role);
+        return;
+      }
+
+      const voiceIdx = posEnd + 2;
+      const setupIdx = voiceIdx + 3;
+      const testIdx = voiceIdx + 4;
+      const quitIdx = voiceIdx + 6;
+
+      if (idx === voiceIdx) {
         this.callbacks.onToggleVoice();
-      } else if (idx === heroEnd + 5) {
+      } else if (idx === setupIdx) {
         this.callbacks.onSetupGSI();
-      } else if (idx === heroEnd + 6) {
+      } else if (idx === testIdx) {
         this.callbacks.onTestVoice();
-      } else if (idx === heroEnd + 8) {
+      } else if (idx === quitIdx) {
         this.callbacks.onQuit();
       }
     });
@@ -116,19 +153,11 @@ export class TrayApp {
     console.log('[TRAY] System tray started');
   }
 
-  /**
-   * Update the status text shown in the tray menu.
-   */
   updateStatus(status: string): void {
     this.statusText = status;
-    // systray2 doesn't support dynamic menu updates easily,
-    // so we log the status to console instead
     console.log(`[STATUS] ${status}`);
   }
 
-  /**
-   * Kill the tray application.
-   */
   kill(): void {
     if (this.systray) {
       this.systray.kill(false);

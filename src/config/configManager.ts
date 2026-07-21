@@ -5,7 +5,7 @@
 
 import * as fs from 'fs';
 import * as path from 'path';
-import { SUPPORTED_HERO_IDS } from '../coaching/types';
+import { SUPPORTED_HERO_IDS, Role } from '../coaching/types';
 
 const APP_NAME = 'GankMeDaddy';
 const CONFIG_DIR = path.join(
@@ -33,6 +33,8 @@ export interface AppConfig {
   gsiPort: number;
   /** How often to poll STRATZ for pre-game data (seconds) */
   stratzPollInterval: number;
+  /** Manual position override (overrides hero auto-detection) */
+  position: Role;
 }
 
 const DEFAULT_CONFIG: AppConfig = {
@@ -45,6 +47,7 @@ const DEFAULT_CONFIG: AppConfig = {
   dota2Path: 'D:\\Programs\\Steam\\steamapps\\common\\dota 2 beta',
   gsiPort: 3001,
   stratzPollInterval: 10,
+  position: 'mid',
 };
 
 export class ConfigManager {

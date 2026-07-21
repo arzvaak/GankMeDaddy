@@ -190,7 +190,7 @@ export class MatchTracker extends EventEmitter {
     const gameTime = state.map.game_time;
     const clockTime = state.map.clock_time;
 
-    const role: Role = HERO_ROLES[state.hero.id || this.currentHeroId] || 'mid';
+    const role: Role = this.config.get().position || HERO_ROLES[state.hero.id || this.currentHeroId] || 'mid';
 
     const MIDGAME_THRESHOLD = 600;
     const LATEGAME_THRESHOLD = 1500;

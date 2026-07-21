@@ -104,6 +104,12 @@ async function main() {
   // 6. Initialize System Tray
   // -------------------------------------------------------------------------
   const tray = new TrayApp(config, {
+    onSetPosition: (role: any) => {
+      config.update({ position: role });
+      const roleName = role.charAt(0).toUpperCase() + role.slice(1);
+      console.log(`[TRAY] Position set to: ${roleName}`);
+      voice.speakNow(`Position set to ${roleName}.`);
+    },
     onToggleHero: (heroId: number) => {
       const enabled = config.toggleHero(heroId);
       const heroName = HERO_NAMES[heroId] || `Hero ${heroId}`;
