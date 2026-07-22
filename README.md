@@ -55,7 +55,7 @@ A lightweight Windows 11 system tray application that provides **real-time voice
 | Sand King | 16 | Sand Storm escape, Caustic Finale farming, Epicenter blink |
 | Centaur | 96 | Double Edge last hits, Stampede initiations, Return trading |
 | Mars | 129 | Spear wall combo, Bulwark positioning, Arena of Blood ult |
-| Dawnbreaker | 135 | Hammer throw trading, Global Presence saves, Celestial H在地 |
+| Dawnbreaker | 135 | Hammer throw trading, Global Presence saves, Celestial Hammer impact |
 | Primal Beast | 137 | Trample uptime, Onslaught initiations, Pulverize ult |
 
 ### Pos 1 — Safelane Carry (7)
