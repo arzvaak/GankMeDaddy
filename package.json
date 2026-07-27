@@ -9,7 +9,7 @@
     "dev": "ts-node --respawn src/index.ts"
   },
   "dependencies": {
-    "dotenv": "^16.4.5",
+    "dotenv": "^17.4.2",
     "express": "^4.21.0",
     "node-fetch": "^2.7.0",
     "say": "^0.16.0",
