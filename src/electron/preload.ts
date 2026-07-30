@@ -9,6 +9,9 @@ contextBridge.exposeInMainWorld('gank', {
   setupGSI: () => ipcRenderer.invoke('coach:setup-gsi'),
   setEnemyOverride: (slot: number, heroId: number | null) => ipcRenderer.invoke('draft:set-enemy-override', slot, heroId),
   clearEnemyOverrides: () => ipcRenderer.invoke('draft:clear-enemy-overrides'),
+  checkForUpdates: () => ipcRenderer.invoke('update:check'),
+  downloadUpdate: () => ipcRenderer.invoke('update:download'),
+  installUpdate: () => ipcRenderer.invoke('update:install'),
   updateConfig: (partial: unknown) => ipcRenderer.invoke('config:update', partial),
   setPosition: (role: string) => ipcRenderer.invoke('config:set-position', role),
   toggleHero: (heroId: number) => ipcRenderer.invoke('config:toggle-hero', heroId),
@@ -19,5 +22,6 @@ contextBridge.exposeInMainWorld('gank', {
   onSnapshot: (callback: (value: unknown) => void) => ipcRenderer.on('runtime:snapshot', (_event, value) => callback(value)),
   onDraft: (callback: (value: unknown) => void) => ipcRenderer.on('runtime:draft', (_event, value) => callback(value)),
   onCapture: (callback: (value: unknown) => void) => ipcRenderer.on('runtime:capture', (_event, value) => callback(value)),
+  onUpdate: (callback: (value: unknown) => void) => ipcRenderer.on('runtime:update', (_event, value) => callback(value)),
   onActivity: (callback: (value: unknown) => void) => ipcRenderer.on('runtime:activity', (_event, value) => callback(value)),
 });

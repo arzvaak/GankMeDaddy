@@ -7,12 +7,14 @@ import { DOTA_HEROES } from '../coaching/heroesData';
 import { HERO_ROLES, SUPPORTED_HERO_IDS, Role } from '../coaching/types';
 import { strategyRegistry } from '../strategies';
 import { VisualDraftDetector, VisualDraftResult } from './visualDraftDetector';
+import { UpdateManager } from './updateManager';
 
 let mainWindow: BrowserWindow | null = null;
 let tray: Tray | null = null;
 let quitting = false;
 let coach: GankMeDaddyApp;
 let visualDraft: VisualDraftDetector;
+let updates: UpdateManager;
 const smokeTest = process.argv.includes('--smoke-test');
 
 const rendererPath = path.resolve(__dirname, '../../src/renderer/index.html');
@@ -65,6 +67,7 @@ function bootstrap() {
       ready: Object.values(requirements).every(Boolean),
     },
     appVersion: app.getVersion(),
+    update: updates.getState(),
     heroes: SUPPORTED_HERO_IDS.filter(id => strategyRegistry.has(id)).map(id => {
       const hero = DOTA_HEROES.find(candidate => candidate.id === id);
       return { id, name: hero?.name || `Hero ${id}`, attr: hero?.attr || 'uni', role: HERO_ROLES[id] || 'mid' };
@@ -90,6 +93,7 @@ function buildTrayMenu(): void {
       click: async () => state.running ? coach.stop() : coach.start(loadToken()),
     },
     { label: 'Voice coaching', type: 'checkbox', checked: cfg.voiceEnabled, click: item => coach.updateConfig({ voiceEnabled: item.checked }) },
+    { label: 'Check for updates', click: () => void updates.check() },
     { type: 'separator' },
     { label: 'Quit', click: () => { quitting = true; app.quit(); } },
   ]));
@@ -140,12 +144,13 @@ function createWindow(): void {
           draftPage: Boolean(document.querySelector('#page-draft')),
           manualPicker: !document.querySelector('#enemy-hero-picker')?.hidden && document.querySelectorAll('[data-pick-enemy-hero]').length >= 100 && typeof window.gank?.setEnemyOverride === 'function',
           visualRecognition: ${recognitionReady},
+          updaterReady: Boolean(document.querySelector('#update-button')) && typeof window.gank?.checkForUpdates === 'function' && typeof window.gank?.downloadUpdate === 'function',
           bridgeReady: typeof window.gank?.bootstrap === 'function' && typeof window.gank?.copyText === 'function'
         };
       })()`);
       console.log(`[SMOKE] ${JSON.stringify(result)}`);
       quitting = true;
-      app.exit(result.bridgeReady && result.visualRecognition && result.draftPage && result.manualPicker && result.pages === 4 && result.tutorialSteps === 6 && result.bundledImages >= 4 ? 0 : 1);
+      app.exit(result.bridgeReady && result.updaterReady && result.visualRecognition && result.draftPage && result.manualPicker && result.pages === 4 && result.tutorialSteps === 6 && result.bundledImages >= 4 ? 0 : 1);
     } catch (error) {
       console.error('[SMOKE] Renderer verification failed:', error);
       quitting = true;
@@ -180,6 +185,14 @@ function registerIpc(): void {
   ipcMain.handle('coach:setup-gsi', () => coach.setupGSI());
   ipcMain.handle('draft:set-enemy-override', (_event, slot: number, heroId: number | null) => coach.setEnemyOverride(slot, heroId));
   ipcMain.handle('draft:clear-enemy-overrides', () => coach.clearManualEnemyOverrides());
+  ipcMain.handle('update:check', () => updates.check());
+  ipcMain.handle('update:download', () => updates.download());
+  ipcMain.handle('update:install', () => {
+    quitting = true;
+    visualDraft.stop();
+    coach.stop();
+    return updates.install();
+  });
   ipcMain.handle('config:update', (_event, partial: Partial<AppConfig>) => coach.updateConfig(partial));
   ipcMain.handle('config:set-position', (_event, role: Role) => coach.setPosition(role));
   ipcMain.handle('config:toggle-hero', (_event, heroId: number) => coach.toggleHero(heroId));
@@ -210,8 +223,11 @@ app.whenReady().then(async () => {
     return;
   }
 
+  app.setAppUserModelId('com.gankmedaddy.coach');
   coach = new GankMeDaddyApp(resourceRoot());
   visualDraft = new VisualDraftDetector(rendererAssetPath);
+  updates = new UpdateManager(app.getVersion(), app.isPackaged && !smokeTest);
+  updates.initialize();
   visualDraft.on('draft', (result: VisualDraftResult) => {
     console.log(`[VISION] radiant=${result.radiant.join(',')} dire=${result.dire.join(',')} confidence=${result.confidence.toFixed(3)}`);
     coach.processVisualDraft(result.radiantSlots, result.direSlots, result.confidence);
@@ -228,6 +244,10 @@ app.whenReady().then(async () => {
   coach.on('snapshot', snapshot => send('runtime:snapshot', snapshot));
   coach.on('draft', draft => send('runtime:draft', draft));
   coach.on('activity', message => send('runtime:activity', { message, timestamp: Date.now() }));
+  updates.on('state', state => {
+    send('runtime:update', state);
+    buildTrayMenu();
+  });
 
   registerIpc();
   createWindow();
@@ -240,6 +260,12 @@ app.whenReady().then(async () => {
 
   const token = loadToken();
   if (token) await coach.start(token).catch(() => undefined);
+
+  if (!smokeTest) {
+    setTimeout(() => void updates.check(), 6000);
+    const updateTimer = setInterval(() => void updates.check(), 4 * 60 * 60 * 1000);
+    updateTimer.unref();
+  }
 
   app.on('second-instance', showWindow);
 });

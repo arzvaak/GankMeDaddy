@@ -46,7 +46,7 @@ Original WebP artwork lives in `src/renderer/assets/` and is packaged inside the
 
 ## Packaging
 
-`electron-builder` creates an NSIS installer. Compiled code and renderer files live in the application archive; Piper and its model are copied to `resources/bin` so the executable can launch them at runtime.
+`electron-builder` creates an NSIS installer. Compiled code and renderer files live in the application archive; Piper and its model are copied to `resources/bin` so the executable can launch them at runtime. `src/electron/updateManager.ts` uses the public GitHub Releases provider for explicit download and restart-to-install updates.
 
 Use `npm run verify` for the compiled Electron renderer/bridge smoke test and `npm run dist:win` for the Windows installer.
 

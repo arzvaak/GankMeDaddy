@@ -20,6 +20,7 @@ A Windows 11 desktop application that provides **real-time voice coaching** for 
 - **Bundled hero portraits** — The complete portrait set is packaged locally for an instant, offline-safe draft display.
 - **Guided match-ready tutorial** — Explains every required input, validates the Dota folder, installs GSI, provides the Steam launch option, and tracks readiness step by step.
 - **Bundled original artwork** — A cohesive command-center visual system ships with the app and remains fully offline.
+- **In-app updater** — Installed builds check the public GitHub Releases feed, show download progress, and let the player choose when to restart and install.
 
 ## Supported Heroes
 
@@ -102,10 +103,13 @@ Use **Install GSI config** in the desktop app to write the local integration fil
 npm run dist:win
 ```
 
-The installer is written to `release/GankMeDaddy-1.3.0-x64.exe`. The installed app will:
+The installer is written to `release/GankMeDaddy-1.4.0-x64.exe`. The installed app will:
 1. Initialize GSI Server on port 3001 (listening on localhost `127.0.0.1` only) and keep the installed config upgraded with the `draft` channel.
 2. Load configuration and pre-fetch pro match data/STRATZ guides for enabled heroes in the background.
 3. Show the Electron dashboard and continue running from the system tray when the window is closed.
+4. Check the public GitHub Releases feed for newer stable versions and offer an in-app download/restart flow.
+
+Prebuilt installers are published on the [GitHub Releases page](https://github.com/arzvaak/GankMeDaddy/releases). Starting with v1.4.0, each release also carries the `latest.yml` and blockmap files used by the in-app updater.
 
 For the original terminal-only workflow, create `.env` with `STRATZ_API_TOKEN` and optionally `STEAM_ACCOUNT_ID`, then run `npm run start:cli`.
 

@@ -14,7 +14,8 @@ if (!window.gank && previewMode) {
     state: { running: false, gsiConnected: false, inMatch: false, inDraft: false, heroId: null, heroName: null, status: 'Setup required', error: null, startedAt: null },
     tokenConfigured: false,
     requirements: { token: false, steam: false, dotaPath: true, gsi: false, launchOptions: false, ready: false },
-    appVersion: '1.3.0-preview',
+    appVersion: '1.4.0-preview',
+    update: { phase: 'disabled', currentVersion: '1.4.0-preview', availableVersion: null, progress: 0, message: 'Update checks are available in installed builds.' },
     heroes: [
       [126, 'Void Spirit', 'uni', 'mid'], [35, 'Sniper', 'agi', 'mid'], [11, 'Shadow Fiend', 'agi', 'mid'], [106, 'Ember Spirit', 'agi', 'mid'],
       [5, 'Crystal Maiden', 'int', 'pos5'], [31, 'Lich', 'int', 'pos5'], [30, 'Witch Doctor', 'int', 'pos5'], [37, 'Warlock', 'int', 'pos5'],
@@ -30,10 +31,11 @@ if (!window.gank && previewMode) {
     testVoice: async () => undefined, setupGSI: async () => 'Preview GSI configuration',
     setEnemyOverride: async (slot, heroId) => ({ ...appState.draft, enemySlots: appState.draft.enemySlots.map((id, index) => index === slot ? heroId || 0 : id), manualEnemySlots: appState.draft.manualEnemySlots.map((id, index) => index === slot ? heroId : id) }),
     clearEnemyOverrides: async () => ({ ...appState.draft, manualEnemySlots: Array(5).fill(null) }),
+    checkForUpdates: async () => previewData.update, downloadUpdate: async () => previewData.update, installUpdate: async () => false,
     updateConfig: async partial => Object.assign(previewConfig, partial), setPosition: async role => Object.assign(previewConfig, { position: role }),
     toggleHero: async heroId => { previewConfig.enabledHeroIds = previewConfig.enabledHeroIds.includes(heroId) ? previewConfig.enabledHeroIds.filter(id => id !== heroId) : [...previewConfig.enabledHeroIds, heroId]; return previewConfig; },
     chooseDotaPath: async () => previewConfig.dota2Path, saveSetup: async () => previewData, copyText: () => undefined,
-    onState: () => undefined, onSnapshot: () => undefined, onDraft: () => undefined, onCapture: () => undefined, onActivity: () => undefined,
+    onState: () => undefined, onSnapshot: () => undefined, onDraft: () => undefined, onCapture: () => undefined, onUpdate: () => undefined, onActivity: () => undefined,
   };
 }
 
@@ -48,6 +50,7 @@ const appState = {
   draft: null,
   capture: null,
   enemyPickerSlot: null,
+  update: null,
 };
 
 const requirementMeta = [
@@ -176,6 +179,26 @@ function renderRuntime(runtime) {
     : runtime.running
       ? 'The local listener is ready. Launch Dota 2 and enter a match to connect.'
       : 'Get calm, role-aware voice cues from draft through the final push—all powered by live local telemetry.');
+  icons();
+}
+
+function renderUpdate(update) {
+  if (!update) return;
+  appState.update = update;
+  const button = $('#update-button');
+  const labels = {
+    idle: ['refresh-cw', 'Check updates'], checking: ['loader-circle', 'Checking…'],
+    available: ['download', `Get v${update.availableVersion}`], downloading: ['download', `${update.progress}%`],
+    downloaded: ['refresh-cw', 'Restart to update'], 'up-to-date': ['check', 'Up to date'],
+    error: ['triangle-alert', 'Retry update'], disabled: ['refresh-cw', 'Check updates'],
+  };
+  const [icon, label] = labels[update.phase] || labels.idle;
+  button.innerHTML = `<i data-lucide="${icon}"></i><span>${escapeHtml(label)}</span><b id="update-progress"></b>`;
+  button.disabled = update.phase === 'checking' || update.phase === 'downloading' || update.phase === 'disabled';
+  button.classList.toggle('has-update', update.phase === 'available' || update.phase === 'downloaded');
+  button.classList.toggle('is-busy', update.phase === 'checking' || update.phase === 'downloading');
+  button.title = update.message;
+  button.style.setProperty('--update-progress', `${update.phase === 'downloading' ? update.progress : 0}%`);
   icons();
 }
 
@@ -394,6 +417,14 @@ function bindEvents() {
       renderRuntime(appState.runtime.running ? await window.gank.stop() : await window.gank.start());
     } catch (error) { toast(error.message); }
   });
+  $('#update-button').addEventListener('click', async () => {
+    try {
+      const phase = appState.update?.phase;
+      if (phase === 'available') renderUpdate(await window.gank.downloadUpdate());
+      else if (phase === 'downloaded') await window.gank.installUpdate();
+      else renderUpdate(await window.gank.checkForUpdates());
+    } catch (error) { toast(`Updater: ${error.message}`); }
+  });
   $$('#role-grid button').forEach(button => button.addEventListener('click', async () => renderConfig(await window.gank.setPosition(button.dataset.role))));
   $('#voice-enabled').addEventListener('change', async event => renderConfig(await window.gank.updateConfig({ voiceEnabled: event.target.checked })));
   $('#volume').addEventListener('input', event => $('#volume-output').textContent = `${event.target.value}%`);
@@ -499,6 +530,7 @@ async function init() {
   $('#app-version').textContent = `v${data.appVersion}`;
   renderConfig(data.config);
   renderRuntime(data.state);
+  renderUpdate(data.update);
   renderReadiness();
   setWizardStep(0);
   if (!data.config.onboardingComplete || !data.requirements.ready) setPage('setup');
@@ -512,6 +544,12 @@ async function init() {
   window.gank.onCapture(status => {
     appState.capture = status;
     $('#capture-status').textContent = status.message;
+  });
+  window.gank.onUpdate(update => {
+    const previous = appState.update?.phase;
+    renderUpdate(update);
+    if (update.phase === 'available' && previous !== 'available') toast(`GankMeDaddy ${update.availableVersion} is available.`);
+    if (update.phase === 'downloaded' && previous !== 'downloaded') toast('Update downloaded. Restart when you are ready.');
   });
   window.gank.onActivity(event => addActivity(event.message, event.timestamp));
   icons();

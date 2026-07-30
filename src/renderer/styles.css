@@ -109,6 +109,8 @@ nav { display: grid; gap: 5px; }
 .status-dot.online { background: var(--green); box-shadow: 0 0 0 4px rgba(98, 201, 161, .1), 0 0 13px rgba(98, 201, 161, .45); }
 .status-dot.live { background: var(--red-bright); box-shadow: 0 0 0 4px rgba(242, 104, 85, .12), 0 0 13px rgba(242, 104, 85, .55); }
 
+.update-button { position: relative; min-width: 112px; overflow: hidden; }.update-button > * { position: relative; z-index: 1; }.update-button b { position: absolute; z-index: 0; inset: auto 0 0; width: var(--update-progress, 0%); height: 3px; background: var(--green); transition: width .2s; }.update-button.has-update { border-color: #9b4037; background: #281817; color: #ff8d7e; }.update-button.is-busy .lucide { animation: spin .9s linear infinite; }
+
 main { grid-column: 2; min-width: 0; }
 .topbar {
   height: 91px;
@@ -152,6 +154,7 @@ main { grid-column: 2; min-width: 0; }
 .page { display: none; padding: 27px 34px 44px; }
 .page.active { display: block; animation: page-in .24s ease; }
 @keyframes page-in { from { opacity: 0; transform: translateY(5px); } }
+@keyframes spin { to { transform: rotate(360deg); } }
 
 .hero-banner { position: relative; min-height: 272px; overflow: hidden; border: 1px solid #343039; border-radius: 15px; background: #11151b; box-shadow: var(--shadow); }
 .hero-art, .hero-shade { position: absolute; inset: 0; width: 100%; height: 100%; }
