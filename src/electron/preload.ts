@@ -1,7 +1,8 @@
-import { contextBridge, ipcRenderer } from 'electron';
+import { clipboard, contextBridge, ipcRenderer } from 'electron';
 
 contextBridge.exposeInMainWorld('gank', {
   bootstrap: () => ipcRenderer.invoke('app:bootstrap'),
+  refresh: () => ipcRenderer.invoke('app:refresh'),
   start: () => ipcRenderer.invoke('coach:start'),
   stop: () => ipcRenderer.invoke('coach:stop'),
   testVoice: () => ipcRenderer.invoke('coach:test-voice'),
@@ -11,6 +12,7 @@ contextBridge.exposeInMainWorld('gank', {
   toggleHero: (heroId: number) => ipcRenderer.invoke('config:toggle-hero', heroId),
   chooseDotaPath: () => ipcRenderer.invoke('config:choose-dota-path'),
   saveSetup: (input: unknown) => ipcRenderer.invoke('config:save-setup', input),
+  copyText: (value: string) => clipboard.writeText(value),
   onState: (callback: (value: unknown) => void) => ipcRenderer.on('runtime:state', (_event, value) => callback(value)),
   onSnapshot: (callback: (value: unknown) => void) => ipcRenderer.on('runtime:snapshot', (_event, value) => callback(value)),
   onActivity: (callback: (value: unknown) => void) => ipcRenderer.on('runtime:activity', (_event, value) => callback(value)),

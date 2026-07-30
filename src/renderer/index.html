@@ -11,23 +11,23 @@
   <div class="app-shell">
     <aside class="sidebar">
       <div class="brand">
-        <div class="brand-mark" aria-hidden="true">
-          <svg viewBox="0 0 48 48"><path d="M9 7h30l4 9-7 25H12L5 16l4-9Zm7 8 7 8-6 9h7l3-6 6 7 3-8-8-8 5-5h-8l-3 4-6-5v4Z"/></svg>
-        </div>
+        <img src="assets/app-emblem.webp" alt="" class="brand-mark">
         <div><strong>GankMeDaddy</strong><span>LIVE COACH</span></div>
       </div>
 
       <nav aria-label="Primary navigation">
-        <button class="nav-item active" data-page="overview"><span>◈</span> Overview</button>
-        <button class="nav-item" data-page="heroes"><span>◇</span> Hero pool</button>
-        <button class="nav-item" data-page="setup"><span>⌁</span> Setup</button>
+        <button class="nav-item active" data-page="overview"><i data-lucide="layout-dashboard"></i><span>Overview</span></button>
+        <button class="nav-item" data-page="heroes"><i data-lucide="shield"></i><span>Hero pool</span></button>
+        <button class="nav-item" data-page="setup"><i data-lucide="route"></i><span>Guided setup</span><b id="nav-setup-badge">5</b></button>
       </nav>
 
       <div class="sidebar-bottom">
         <div class="connection-card">
           <div class="connection-row"><span class="status-dot" id="side-status-dot"></span><strong id="side-status">Coach offline</strong></div>
           <p id="side-status-copy">Complete setup to begin.</p>
+          <button class="mini-link" data-go-setup>View readiness <i data-lucide="arrow-right"></i></button>
         </div>
+        <div class="privacy-chip"><i data-lucide="lock-keyhole"></i><span>Local telemetry only</span></div>
         <div class="version">Desktop <span id="app-version">v1.0.0</span></div>
       </div>
     </aside>
@@ -40,35 +40,46 @@
         </div>
         <div class="top-actions">
           <div class="live-pill"><span class="status-dot" id="top-status-dot"></span><span id="top-status">Offline</span></div>
-          <button class="button primary" id="coach-toggle">Start coach</button>
+          <button class="button primary" id="coach-toggle"><i data-lucide="play"></i><span>Start coach</span></button>
         </div>
       </header>
 
       <section class="page active" id="page-overview">
-        <div class="hero-banner">
+        <article class="hero-banner">
+          <img class="hero-art" src="assets/command-center.webp" alt="A tactical fantasy arena viewed from a commander's overlook">
+          <div class="hero-shade"></div>
           <div class="banner-copy">
             <div class="match-label"><span class="pulse"></span><span id="match-label">READY CHECK</span></div>
-            <h2 id="match-heading">Waiting for Dota 2</h2>
-            <p id="match-copy">Start the coach, launch Dota 2, and your live telemetry will appear here automatically.</p>
+            <h2 id="match-heading">Your match. A clearer plan.</h2>
+            <p id="match-copy">Get calm, role-aware voice cues from draft through the final push—all powered by live local telemetry.</p>
             <div class="banner-actions">
-              <button class="button light" id="setup-gsi">Install GSI config</button>
-              <button class="button ghost" id="test-voice">Test voice</button>
+              <button class="button light" data-go-setup><i data-lucide="sparkles"></i><span>Finish guided setup</span></button>
+              <button class="button glass" id="test-voice"><i data-lucide="volume-2"></i><span>Test voice</span></button>
             </div>
           </div>
-          <div class="radar-art" aria-hidden="true"><div class="ring r1"></div><div class="ring r2"></div><div class="ring r3"></div><div class="sweep"></div><div class="radar-core">GSI</div></div>
-        </div>
+          <div class="hero-signal"><i data-lucide="radio"></i><span>GSI listener</span><strong id="listener-state">Standby</strong></div>
+        </article>
+
+        <article class="readiness-card" id="readiness-card">
+          <div class="readiness-summary">
+            <div class="readiness-ring"><svg viewBox="0 0 42 42"><circle cx="21" cy="21" r="17"></circle><circle id="readiness-ring-value" cx="21" cy="21" r="17"></circle></svg><strong id="readiness-percent">0%</strong></div>
+            <div><p class="eyebrow">MATCH READINESS</p><h3 id="readiness-title">A few things need your attention</h3><p id="readiness-copy">We’ll walk you through every requirement.</p></div>
+          </div>
+          <div class="requirement-chips" id="requirement-chips"></div>
+          <button class="button subtle" data-go-setup><span>Review setup</span><i data-lucide="chevron-right"></i></button>
+        </article>
 
         <div class="metrics-grid">
-          <article class="metric"><span>HEALTH</span><strong id="metric-health">—</strong><div class="meter"><i id="health-meter"></i></div></article>
-          <article class="metric"><span>MANA</span><strong id="metric-mana">—</strong><div class="meter blue"><i id="mana-meter"></i></div></article>
-          <article class="metric"><span>K / D / A</span><strong id="metric-kda">— / — / —</strong><small>Current match</small></article>
-          <article class="metric"><span>LAST HITS</span><strong id="metric-lh">—</strong><small id="metric-gpm">Waiting for data</small></article>
+          <article class="metric"><div class="metric-icon health"><i data-lucide="heart-pulse"></i></div><div><span>HEALTH</span><strong id="metric-health">—</strong><div class="meter"><i id="health-meter"></i></div></div></article>
+          <article class="metric"><div class="metric-icon mana"><i data-lucide="droplets"></i></div><div><span>MANA</span><strong id="metric-mana">—</strong><div class="meter blue"><i id="mana-meter"></i></div></div></article>
+          <article class="metric"><div class="metric-icon"><i data-lucide="swords"></i></div><div><span>K / D / A</span><strong id="metric-kda">— / — / —</strong><small>Current match</small></div></article>
+          <article class="metric"><div class="metric-icon"><i data-lucide="coins"></i></div><div><span>LAST HITS</span><strong id="metric-lh">—</strong><small id="metric-gpm">Waiting for data</small></div></article>
         </div>
 
         <div class="dashboard-grid">
           <article class="panel control-panel">
-            <div class="panel-heading"><div><p class="eyebrow">COACH PROFILE</p><h3>How should I coach?</h3></div><span class="saved-label" id="saved-label">Saved locally</span></div>
-            <label class="field-label" for="position">Your position</label>
+            <div class="panel-heading"><div><p class="eyebrow">COACH PROFILE</p><h3>How should I coach?</h3></div><span class="saved-label"><i data-lucide="cloud-off"></i> Saved locally</span></div>
+            <label class="field-label">Your position</label>
             <div class="role-grid" id="role-grid">
               <button data-role="pos1"><b>1</b><span>Carry</span></button>
               <button data-role="mid"><b>2</b><span>Mid</span></button>
@@ -77,45 +88,90 @@
               <button data-role="pos5"><b>5</b><span>Hard support</span></button>
             </div>
             <div class="setting-row"><div><strong>Voice coaching</strong><span>Real-time spoken recommendations</span></div><label class="switch"><input id="voice-enabled" type="checkbox"><i></i></label></div>
-            <div class="slider-block"><div><label for="volume">Voice volume</label><output id="volume-output">80%</output></div><input id="volume" type="range" min="0" max="100" step="10"></div>
-            <div class="slider-block"><div><label for="aggression">Coaching intensity</label><output id="aggression-output">10 / 10</output></div><input id="aggression" type="range" min="1" max="10"></div>
+            <div class="slider-grid">
+              <div class="slider-block"><div><label for="volume">Voice volume</label><output id="volume-output">80%</output></div><input id="volume" type="range" min="0" max="100" step="10"></div>
+              <div class="slider-block"><div><label for="aggression">Coaching intensity</label><output id="aggression-output">10 / 10</output></div><input id="aggression" type="range" min="1" max="10"></div>
+            </div>
           </article>
 
           <article class="panel activity-panel">
-            <div class="panel-heading"><div><p class="eyebrow">SIGNAL LOG</p><h3>Recent activity</h3></div><button class="text-button" id="clear-activity">Clear</button></div>
-            <div class="activity-list" id="activity-list">
-              <div class="empty-state"><span>⌁</span><strong>No signals yet</strong><p>Connection and coaching events will appear here.</p></div>
-            </div>
+            <div class="panel-heading"><div><p class="eyebrow">SIGNAL LOG</p><h3>Recent activity</h3></div><button class="icon-button" id="clear-activity" title="Clear activity"><i data-lucide="trash-2"></i></button></div>
+            <div class="activity-list" id="activity-list"></div>
           </article>
         </div>
       </section>
 
       <section class="page" id="page-heroes">
-        <div class="section-intro"><div><p class="eyebrow">STRATEGY MODULES</p><h2>Choose your hero pool</h2><p>Enabled heroes are preloaded from STRATZ when the coach starts.</p></div><div class="hero-count"><strong id="hero-count">0</strong><span>enabled</span></div></div>
-        <div class="filter-row"><input id="hero-search" type="search" placeholder="Search heroes…"><div class="filter-tabs" id="hero-filters"><button class="active" data-filter="all">All</button><button data-filter="pos1">Carry</button><button data-filter="mid">Mid</button><button data-filter="pos3">Offlane</button><button data-filter="pos4">Soft support</button><button data-filter="pos5">Hard support</button></div></div>
+        <div class="section-intro"><div><p class="eyebrow">DEDICATED STRATEGY MODULES</p><h2>Build your coaching pool</h2><p>Only enabled heroes preload professional benchmarks, keeping startup focused and fast.</p></div><div class="hero-count"><strong id="hero-count">0</strong><span>enabled heroes</span></div></div>
+        <div class="filter-row"><label class="search-field"><i data-lucide="search"></i><input id="hero-search" type="search" placeholder="Search your hero pool…"></label><div class="filter-tabs" id="hero-filters"><button class="active" data-filter="all">All</button><button data-filter="pos1">Carry</button><button data-filter="mid">Mid</button><button data-filter="pos3">Offlane</button><button data-filter="pos4">Soft support</button><button data-filter="pos5">Hard support</button></div></div>
         <div class="hero-grid" id="hero-grid"></div>
       </section>
 
-      <section class="page" id="page-setup">
-        <div class="setup-layout">
-          <div class="setup-copy"><p class="eyebrow">FIRST-RUN SETUP</p><h2>Connect your game</h2><p>Your token is encrypted using Windows protection and never displayed again. All game telemetry stays on <code>127.0.0.1</code>.</p><ol><li><b>Add your STRATZ token</b><span>Used to load professional match benchmarks.</span></li><li><b>Confirm Steam and Dota</b><span>We use these to find your history and install GSI.</span></li><li><b>Install the GSI config</b><span>Dota will begin sending local match telemetry.</span></li></ol></div>
-          <form class="panel setup-form" id="setup-form">
-            <div class="form-heading"><h3>Connection settings</h3><span id="token-state">Token required</span></div>
-            <label>STRATZ API token<input id="stratz-token" type="password" autocomplete="off" placeholder="Paste a new token"></label>
-            <p class="input-help">Leave blank to keep the encrypted token already saved.</p>
-            <label>Steam account ID<input id="steam-id" type="number" min="0" placeholder="e.g. 123456789"></label>
-            <label>Dota 2 installation</label>
-            <div class="path-input"><input id="dota-path" type="text"><button type="button" id="browse-dota">Browse</button></div>
-            <label>Local GSI port<input id="gsi-port" type="number" min="1024" max="65535"></label>
-            <div class="privacy-note"><span>▣</span><p><strong>Local by design</strong>Game state is accepted only from your own computer.</p></div>
-            <button class="button primary full" type="submit">Save & start coach</button>
+      <section class="page setup-page" id="page-setup">
+        <div class="setup-hero">
+          <div><p class="eyebrow">GUIDED SETUP</p><h2>Match-ready in about five minutes.</h2><p>No terminal needed. We’ll explain every permission, where to find each value, and what stays on your computer.</p></div>
+          <div class="setup-overall"><span id="setup-progress-copy">0 of 5 ready</span><div><i id="setup-progress-bar"></i></div></div>
+        </div>
+
+        <div class="wizard-shell">
+          <aside class="wizard-steps" id="wizard-steps">
+            <button class="active" data-step="0"><span>01</span><div><strong>Before you start</strong><small>What the coach needs</small></div><i data-lucide="chevron-right"></i></button>
+            <button data-step="1"><span>02</span><div><strong>Connect STRATZ</strong><small>Professional benchmarks</small></div><i data-lucide="chevron-right"></i></button>
+            <button data-step="2"><span>03</span><div><strong>Find your game</strong><small>Steam ID & Dota folder</small></div><i data-lucide="chevron-right"></i></button>
+            <button data-step="3"><span>04</span><div><strong>Enable telemetry</strong><small>Install the local GSI file</small></div><i data-lucide="chevron-right"></i></button>
+            <button data-step="4"><span>05</span><div><strong>Launch option</strong><small>One Steam setting</small></div><i data-lucide="chevron-right"></i></button>
+            <button data-step="5"><span>06</span><div><strong>Test & finish</strong><small>Confirm you’re ready</small></div><i data-lucide="chevron-right"></i></button>
+          </aside>
+
+          <div class="wizard-content">
+            <article class="tutorial-step active" data-step-panel="0">
+              <div class="step-art wide"><img src="assets/command-center.webp" alt="Fantasy tactical arena overview"></div>
+              <p class="step-kicker">WELCOME ABOARD</p><h3>Four inputs. One local connection.</h3><p class="step-lead">GankMeDaddy listens to the match data Dota already exposes, compares your state with role-aware benchmarks, and speaks useful cues. Here’s everything you’ll provide:</p>
+              <div class="needs-grid">
+                <div><i data-lucide="key-round"></i><strong>STRATZ token</strong><span>Fetches pro benchmarks. Stored with Windows protection.</span></div>
+                <div><i data-lucide="user-round"></i><strong>Steam account ID</strong><span>Loads your recent matches for context.</span></div>
+                <div><i data-lucide="folder-search"></i><strong>Dota folder</strong><span>Lets us place one small configuration file.</span></div>
+                <div><i data-lucide="terminal-square"></i><strong>Launch option</strong><span>Enables Dota’s official local telemetry feed.</span></div>
+              </div>
+              <div class="privacy-banner"><i data-lucide="shield-check"></i><div><strong>Your live match data never leaves your PC through this app.</strong><span>The GSI listener accepts connections only on 127.0.0.1—your own computer.</span></div></div>
+            </article>
+
+            <article class="tutorial-step" data-step-panel="1">
+              <div class="step-columns"><div class="step-art"><img src="assets/secure-token.webp" alt="Encrypted data shard connecting to a secure vault"></div><div class="step-copy"><p class="step-kicker">STEP 2 · STRATZ</p><h3>Connect professional match intelligence.</h3><p>STRATZ supplies item timings, builds, win rates, and role-aware professional benchmarks. GankMeDaddy only needs a personal API token.</p><a class="external-link" href="https://stratz.com/api" target="_blank" rel="noreferrer"><i data-lucide="external-link"></i> Open STRATZ token page</a><ol class="micro-steps"><li>Sign in to STRATZ with Steam.</li><li>Open <b>API → My Tokens</b> and create a token.</li><li>Paste it below. We protect it with Windows encryption.</li></ol></div></div>
+              <label class="input-label" for="stratz-token">STRATZ API token</label><div class="secure-input"><i data-lucide="key-round"></i><input id="stratz-token" type="password" autocomplete="off" placeholder="Paste your token"><button type="button" id="toggle-token" aria-label="Show or hide token"><i data-lucide="eye"></i></button></div><p class="input-help" id="token-help">If a token is already secured, leave this blank to keep it.</p>
+            </article>
+
+            <article class="tutorial-step" data-step-panel="2">
+              <div class="step-columns"><div class="step-art"><img src="assets/local-telemetry.webp" alt="A local game portal connecting to a coaching beacon"></div><div class="step-copy"><p class="step-kicker">STEP 3 · YOUR GAME</p><h3>Tell us which player and installation to use.</h3><p>Your STRATZ account ID is the shorter numeric ID shown in a STRATZ player URL—not the 17-digit SteamID64. The Dota folder should contain <b>game\dota</b>.</p><div class="example-card"><span>Example STRATZ URL</span><code>stratz.com/players/<b>123456789</b></code></div></div></div>
+              <div class="form-grid"><label><span>Steam account ID</span><div class="input-with-icon"><i data-lucide="user-round"></i><input id="steam-id" type="number" min="1" placeholder="123456789"></div></label><label><span>Dota 2 installation folder</span><div class="path-input"><div class="input-with-icon"><i data-lucide="folder"></i><input id="dota-path" type="text"></div><button type="button" id="browse-dota">Browse</button></div></label></div>
+              <details><summary>Where is Dota usually installed?</summary><code>C:\Program Files (x86)\Steam\steamapps\common\dota 2 beta</code><p>If you use another Steam library, choose that library’s <b>steamapps\common\dota 2 beta</b> folder.</p></details>
+            </article>
+
+            <article class="tutorial-step" data-step-panel="3">
+              <div class="step-columns compact"><div class="step-art"><img src="assets/local-telemetry.webp" alt="Local game telemetry flowing into a coaching beacon"></div><div class="step-copy"><p class="step-kicker">STEP 4 · LOCAL TELEMETRY</p><h3>Install the GSI connection file.</h3><p>This creates one readable text file inside Dota’s configuration folder. It tells Dota to send live match state to this app on your own computer.</p><div class="data-list"><span><i data-lucide="check"></i> Health, mana and level</span><span><i data-lucide="check"></i> Items, abilities and cooldowns</span><span><i data-lucide="check"></i> K/D/A, last hits and game time</span><span><i data-lucide="x"></i> No keyboard, microphone or screen capture</span></div></div></div>
+              <div class="install-card"><div><i data-lucide="file-cog"></i><div><strong>gamestate_integration_gankmedaddy.cfg</strong><span id="gsi-location">Waiting for a valid Dota folder</span></div></div><button class="button primary" id="install-gsi"><i data-lucide="download"></i><span>Install GSI config</span></button></div>
+            </article>
+
+            <article class="tutorial-step" data-step-panel="4">
+              <p class="step-kicker">STEP 5 · STEAM</p><h3>Add one launch option.</h3><p class="step-lead">This is the only manual Dota setting. It enables Game State Integration when Dota starts.</p>
+              <div class="launch-walkthrough"><div><span>1</span><i data-lucide="gamepad-2"></i><strong>Open Steam Library</strong><p>Right-click Dota 2 and choose Properties.</p></div><i data-lucide="arrow-right"></i><div><span>2</span><i data-lucide="settings-2"></i><strong>Find Launch Options</strong><p>Stay on the General tab and scroll down.</p></div><i data-lucide="arrow-right"></i><div><span>3</span><i data-lucide="terminal"></i><strong>Paste the option</strong><p>Keep any options you already use.</p></div></div>
+              <div class="copy-command"><code>-gamestateintegration</code><button id="copy-launch-option"><i data-lucide="copy"></i><span>Copy</span></button></div>
+              <label class="confirmation"><input id="launch-confirmed" type="checkbox"><i data-lucide="check"></i><span><strong>I added the launch option</strong><small>You can return here and change this confirmation anytime.</small></span></label>
+            </article>
+
+            <article class="tutorial-step" data-step-panel="5">
+              <div class="finish-layout"><div><p class="step-kicker">FINAL CHECK</p><h3 id="finish-title">Let’s make sure everything is connected.</h3><p id="finish-copy">Complete the items below, then run a voice test. Dota will show as connected after it sends its first telemetry update.</p><div class="final-checks" id="final-checks"></div><div class="finish-actions"><button class="button glass" id="finish-test-voice"><i data-lucide="volume-2"></i><span>Test coaching voice</span></button><button class="button primary" id="finish-setup"><i data-lucide="check-circle-2"></i><span>Finish setup</span></button></div></div><div class="finish-art"><img src="assets/command-center.webp" alt="Tactical fantasy arena ready for a match"><div><i data-lucide="radio-tower"></i><strong>Ready for the first match</strong><span>Launch Dota 2 after finishing.</span></div></div></div>
+            </article>
+
+            <footer class="wizard-footer"><button class="button text" id="wizard-back"><i data-lucide="arrow-left"></i><span>Back</span></button><span id="wizard-position">Step 1 of 6</span><button class="button light" id="wizard-next"><span>Continue</span><i data-lucide="arrow-right"></i></button></footer>
             <p class="form-message" id="form-message" role="status"></p>
-          </form>
+          </div>
         </div>
       </section>
     </main>
   </div>
   <div class="toast" id="toast" role="status"></div>
+  <script src="../../node_modules/lucide/dist/umd/lucide.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

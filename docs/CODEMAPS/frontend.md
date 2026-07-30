@@ -31,6 +31,14 @@ The main process sends three event types through the preload bridge:
 - `runtime:snapshot` — current health, mana, K/D/A, last hits, GPM, level, items, and related telemetry.
 - `runtime:activity` — user-readable background events such as STRATZ preload and GSI installation.
 
+## Guided Setup
+
+The setup page is a resumable six-step tutorial covering prerequisites, STRATZ, Steam account identification, Dota folder validation, GSI installation, the Steam launch option, and a final readiness check. `bootstrap()` returns individual requirement flags so the overview and tutorial share one source of truth.
+
+## Bundled Visuals
+
+Original WebP artwork lives in `src/renderer/assets/` and is packaged inside the application archive. Lucide provides the interface icon system; the renderer does not load images, fonts, icons, or scripts from a CDN.
+
 ## Packaging
 
 `electron-builder` creates an NSIS installer. Compiled code and renderer files live in the application archive; Piper and its model are copied to `resources/bin` so the executable can launch them at runtime.

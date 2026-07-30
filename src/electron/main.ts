@@ -46,10 +46,21 @@ function saveToken(token: string): void {
 
 function bootstrap() {
   const config = coach.getConfig();
+  const requirements = {
+    token: Boolean(loadToken()),
+    steam: config.steamAccountId > 0,
+    dotaPath: fs.existsSync(path.join(config.dota2Path, 'game', 'dota')),
+    gsi: fs.existsSync(coach.config.getGSIConfigPath()),
+    launchOptions: config.launchOptionsConfirmed,
+  };
   return {
     config,
     state: coach.getState(),
-    tokenConfigured: Boolean(loadToken()),
+    tokenConfigured: requirements.token,
+    requirements: {
+      ...requirements,
+      ready: Object.values(requirements).every(Boolean),
+    },
     appVersion: app.getVersion(),
     heroes: SUPPORTED_HERO_IDS.filter(id => strategyRegistry.has(id)).map(id => {
       const hero = DOTA_HEROES.find(candidate => candidate.id === id);
@@ -95,7 +106,7 @@ function createWindow(): void {
     y: smokeTest ? -10000 : undefined,
     backgroundColor: '#080b10',
     title: 'GankMeDaddy',
-    icon: path.join(resourceRoot(), 'dota2.ico'),
+    icon: path.join(resourceRoot(), 'app.ico'),
     show: smokeTest,
     webPreferences: {
       preload: preloadPath,
@@ -117,11 +128,13 @@ function createWindow(): void {
         title: document.title,
         pages: document.querySelectorAll('.page').length,
         heroCards: document.querySelectorAll('.hero-card').length,
-        bridgeReady: typeof window.gank?.bootstrap === 'function'
+        tutorialSteps: document.querySelectorAll('.tutorial-step').length,
+        bundledImages: [...document.images].filter(image => image.complete && image.naturalWidth > 0).length,
+        bridgeReady: typeof window.gank?.bootstrap === 'function' && typeof window.gank?.copyText === 'function'
       })`);
       console.log(`[SMOKE] ${JSON.stringify(result)}`);
       quitting = true;
-      app.exit(result.bridgeReady && result.pages === 3 ? 0 : 1);
+      app.exit(result.bridgeReady && result.pages === 3 && result.tutorialSteps === 6 && result.bundledImages >= 4 ? 0 : 1);
     } catch (error) {
       console.error('[SMOKE] Renderer verification failed:', error);
       quitting = true;
@@ -143,6 +156,7 @@ function createWindow(): void {
 
 function registerIpc(): void {
   ipcMain.handle('app:bootstrap', () => bootstrap());
+  ipcMain.handle('app:refresh', () => bootstrap());
   ipcMain.handle('coach:start', async () => {
     await coach.start(loadToken());
     return coach.getState();
@@ -191,7 +205,7 @@ app.whenReady().then(async () => {
   registerIpc();
   createWindow();
 
-  const trayIcon = nativeImage.createFromPath(path.join(resourceRoot(), 'dota2.ico'));
+  const trayIcon = nativeImage.createFromPath(path.join(resourceRoot(), 'app.ico'));
   tray = new Tray(trayIcon);
   tray.setToolTip('GankMeDaddy — Dota 2 live coach');
   tray.on('double-click', showWindow);

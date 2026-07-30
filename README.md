@@ -15,6 +15,8 @@ A Windows 11 desktop application that provides **real-time voice coaching** for 
 - **Creep score checkpoints** at 10/20/30 min vs pro player pace.
 - **Priority-based TTS queue** with interrupt protection and cooldown deduplication.
 - **Electron control center** — Live telemetry, position and voice controls, hero-pool management, secure first-run setup, and minimize-to-tray behavior.
+- **Guided match-ready tutorial** — Explains every required input, validates the Dota folder, installs GSI, provides the Steam launch option, and tracks readiness step by step.
+- **Bundled original artwork** — A cohesive command-center visual system ships with the app and remains fully offline.
 
 ## Supported Heroes
 
@@ -83,7 +85,7 @@ npm install
 npm start
 ```
 
-Open **Setup** in the app and enter your STRATZ token, Steam account ID, and Dota 2 installation folder. The token is protected with the operating system's credential encryption and is never sent to the renderer after it is saved.
+Open **Guided setup** in the app. It explains where to obtain a STRATZ token, which Steam account ID is required, how to locate the Dota folder, what the GSI file contains, and where to add the launch option. The token is protected with the operating system's credential encryption and is never sent to the renderer after it is saved.
 
 ### 3. Dota 2 Setup
 Add `-gamestateintegration` to Dota 2's Steam launch options:

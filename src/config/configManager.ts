@@ -47,10 +47,14 @@ export interface AppConfig {
   stratzPollInterval: number;
   /** Manual position override (overrides hero auto-detection) */
   position: Role;
+  /** User confirmed the Dota launch option has been added */
+  launchOptionsConfirmed: boolean;
+  /** User completed the guided desktop onboarding */
+  onboardingComplete: boolean;
 }
 
 const DEFAULT_CONFIG: AppConfig = {
-  configVersion: 2,
+  configVersion: 3,
   steamAccountId: Number(process.env.STEAM_ACCOUNT_ID) || 0,
   enabledHeroIds: [...SUPPORTED_HERO_IDS],
   aggressionLevel: 10,
@@ -61,6 +65,8 @@ const DEFAULT_CONFIG: AppConfig = {
   gsiPort: 3001,
   stratzPollInterval: 10,
   position: 'mid',
+  launchOptionsConfirmed: false,
+  onboardingComplete: false,
 };
 
 export class ConfigManager {
@@ -137,9 +143,14 @@ export class ConfigManager {
             loaded.enabledHeroIds.push(145);
           }
           loaded.configVersion = 2;
-          this.config = loaded;
-          this.save();
         }
+        if (loaded.configVersion < 3) {
+          loaded.launchOptionsConfirmed = false;
+          loaded.onboardingComplete = false;
+          loaded.configVersion = 3;
+        }
+        this.config = loaded;
+        this.save();
         return loaded;
       }
     } catch (err) {

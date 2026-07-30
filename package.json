@@ -17,6 +17,7 @@
   "dependencies": {
     "dotenv": "^16.4.5",
     "express": "^4.21.0",
+    "lucide": "^1.28.0",
     "node-fetch": "^2.7.0"
   },
   "devDependencies": {
@@ -46,12 +47,12 @@
         "to": "bin"
       },
       {
-        "from": "dota2.ico",
-        "to": "dota2.ico"
+        "from": "src/renderer/assets/app-emblem.ico",
+        "to": "app.ico"
       }
     ],
     "win": {
-      "icon": "dota2.ico",
+      "icon": "src/renderer/assets/app-emblem.ico",
       "target": "nsis"
     },
     "nsis": {
