@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self'; script-src 'self'; img-src 'self' data:">
+  <title>GankMeDaddy</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-mark" aria-hidden="true">
+          <svg viewBox="0 0 48 48"><path d="M9 7h30l4 9-7 25H12L5 16l4-9Zm7 8 7 8-6 9h7l3-6 6 7 3-8-8-8 5-5h-8l-3 4-6-5v4Z"/></svg>
+        </div>
+        <div><strong>GankMeDaddy</strong><span>LIVE COACH</span></div>
+      </div>
+
+      <nav aria-label="Primary navigation">
+        <button class="nav-item active" data-page="overview"><span>◈</span> Overview</button>
+        <button class="nav-item" data-page="heroes"><span>◇</span> Hero pool</button>
+        <button class="nav-item" data-page="setup"><span>⌁</span> Setup</button>
+      </nav>
+
+      <div class="sidebar-bottom">
+        <div class="connection-card">
+          <div class="connection-row"><span class="status-dot" id="side-status-dot"></span><strong id="side-status">Coach offline</strong></div>
+          <p id="side-status-copy">Complete setup to begin.</p>
+        </div>
+        <div class="version">Desktop <span id="app-version">v1.0.0</span></div>
+      </div>
+    </aside>
+
+    <main>
+      <header class="topbar">
+        <div>
+          <p class="eyebrow" id="page-eyebrow">COMMAND CENTER</p>
+          <h1 id="page-title">Overview</h1>
+        </div>
+        <div class="top-actions">
+          <div class="live-pill"><span class="status-dot" id="top-status-dot"></span><span id="top-status">Offline</span></div>
+          <button class="button primary" id="coach-toggle">Start coach</button>
+        </div>
+      </header>
+
+      <section class="page active" id="page-overview">
+        <div class="hero-banner">
+          <div class="banner-copy">
+            <div class="match-label"><span class="pulse"></span><span id="match-label">READY CHECK</span></div>
+            <h2 id="match-heading">Waiting for Dota 2</h2>
+            <p id="match-copy">Start the coach, launch Dota 2, and your live telemetry will appear here automatically.</p>
+            <div class="banner-actions">
+              <button class="button light" id="setup-gsi">Install GSI config</button>
+              <button class="button ghost" id="test-voice">Test voice</button>
+            </div>
+          </div>
+          <div class="radar-art" aria-hidden="true"><div class="ring r1"></div><div class="ring r2"></div><div class="ring r3"></div><div class="sweep"></div><div class="radar-core">GSI</div></div>
+        </div>
+
+        <div class="metrics-grid">
+          <article class="metric"><span>HEALTH</span><strong id="metric-health">—</strong><div class="meter"><i id="health-meter"></i></div></article>
+          <article class="metric"><span>MANA</span><strong id="metric-mana">—</strong><div class="meter blue"><i id="mana-meter"></i></div></article>
+          <article class="metric"><span>K / D / A</span><strong id="metric-kda">— / — / —</strong><small>Current match</small></article>
+          <article class="metric"><span>LAST HITS</span><strong id="metric-lh">—</strong><small id="metric-gpm">Waiting for data</small></article>
+        </div>
+
+        <div class="dashboard-grid">
+          <article class="panel control-panel">
+            <div class="panel-heading"><div><p class="eyebrow">COACH PROFILE</p><h3>How should I coach?</h3></div><span class="saved-label" id="saved-label">Saved locally</span></div>
+            <label class="field-label" for="position">Your position</label>
+            <div class="role-grid" id="role-grid">
+              <button data-role="pos1"><b>1</b><span>Carry</span></button>
+              <button data-role="mid"><b>2</b><span>Mid</span></button>
+              <button data-role="pos3"><b>3</b><span>Offlane</span></button>
+              <button data-role="pos4"><b>4</b><span>Soft support</span></button>
+              <button data-role="pos5"><b>5</b><span>Hard support</span></button>
+            </div>
+            <div class="setting-row"><div><strong>Voice coaching</strong><span>Real-time spoken recommendations</span></div><label class="switch"><input id="voice-enabled" type="checkbox"><i></i></label></div>
+            <div class="slider-block"><div><label for="volume">Voice volume</label><output id="volume-output">80%</output></div><input id="volume" type="range" min="0" max="100" step="10"></div>
+            <div class="slider-block"><div><label for="aggression">Coaching intensity</label><output id="aggression-output">10 / 10</output></div><input id="aggression" type="range" min="1" max="10"></div>
+          </article>
+
+          <article class="panel activity-panel">
+            <div class="panel-heading"><div><p class="eyebrow">SIGNAL LOG</p><h3>Recent activity</h3></div><button class="text-button" id="clear-activity">Clear</button></div>
+            <div class="activity-list" id="activity-list">
+              <div class="empty-state"><span>⌁</span><strong>No signals yet</strong><p>Connection and coaching events will appear here.</p></div>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <section class="page" id="page-heroes">
+        <div class="section-intro"><div><p class="eyebrow">STRATEGY MODULES</p><h2>Choose your hero pool</h2><p>Enabled heroes are preloaded from STRATZ when the coach starts.</p></div><div class="hero-count"><strong id="hero-count">0</strong><span>enabled</span></div></div>
+        <div class="filter-row"><input id="hero-search" type="search" placeholder="Search heroes…"><div class="filter-tabs" id="hero-filters"><button class="active" data-filter="all">All</button><button data-filter="pos1">Carry</button><button data-filter="mid">Mid</button><button data-filter="pos3">Offlane</button><button data-filter="pos4">Soft support</button><button data-filter="pos5">Hard support</button></div></div>
+        <div class="hero-grid" id="hero-grid"></div>
+      </section>
+
+      <section class="page" id="page-setup">
+        <div class="setup-layout">
+          <div class="setup-copy"><p class="eyebrow">FIRST-RUN SETUP</p><h2>Connect your game</h2><p>Your token is encrypted using Windows protection and never displayed again. All game telemetry stays on <code>127.0.0.1</code>.</p><ol><li><b>Add your STRATZ token</b><span>Used to load professional match benchmarks.</span></li><li><b>Confirm Steam and Dota</b><span>We use these to find your history and install GSI.</span></li><li><b>Install the GSI config</b><span>Dota will begin sending local match telemetry.</span></li></ol></div>
+          <form class="panel setup-form" id="setup-form">
+            <div class="form-heading"><h3>Connection settings</h3><span id="token-state">Token required</span></div>
+            <label>STRATZ API token<input id="stratz-token" type="password" autocomplete="off" placeholder="Paste a new token"></label>
+            <p class="input-help">Leave blank to keep the encrypted token already saved.</p>
+            <label>Steam account ID<input id="steam-id" type="number" min="0" placeholder="e.g. 123456789"></label>
+            <label>Dota 2 installation</label>
+            <div class="path-input"><input id="dota-path" type="text"><button type="button" id="browse-dota">Browse</button></div>
+            <label>Local GSI port<input id="gsi-port" type="number" min="1024" max="65535"></label>
+            <div class="privacy-note"><span>▣</span><p><strong>Local by design</strong>Game state is accepted only from your own computer.</p></div>
+            <button class="button primary full" type="submit">Save & start coach</button>
+            <p class="form-message" id="form-message" role="status"></p>
+          </form>
+        </div>
+      </section>
+    </main>
+  </div>
+  <div class="toast" id="toast" role="status"></div>
+  <script src="app.js"></script>
+</body>
+</html>

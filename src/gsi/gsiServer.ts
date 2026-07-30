@@ -32,12 +32,19 @@ export class GSIServer extends EventEmitter {
    * Start listening for GSI payloads.
    */
   start(): Promise<void> {
-    return new Promise((resolve) => {
-      this.server = this.app.listen(this.port, '127.0.0.1', () => {
+    return new Promise((resolve, reject) => {
+      const server = this.app.listen(this.port, '127.0.0.1', () => {
+        server.removeListener('error', onError);
         console.log(`[GSI] Server listening on http://127.0.0.1:${this.port} (localhost only)`);
         console.log('[GSI] Waiting for Dota 2 game state data...');
         resolve();
       });
+      const onError = (error: Error) => {
+        this.server = null;
+        reject(error);
+      };
+      server.once('error', onError);
+      this.server = server;
     });
   }
 
@@ -47,6 +54,9 @@ export class GSIServer extends EventEmitter {
   stop(): void {
     if (this.server) {
       this.server.close();
+      this.server = null;
+      this.connected = false;
+      this.lastGameState = '';
       console.log('[GSI] Server stopped');
     }
   }

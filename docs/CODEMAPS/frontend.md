@@ -1,78 +1,43 @@
-# Frontend & User Interface Codemap
+# Frontend & Desktop UI Codemap
 
-**Last Updated:** 2026-07-21
-**Entry Points:**
-- [src/tray/trayApp.ts](file:///d:/GankMeDaddy/src/tray/trayApp.ts)
+**Last Updated:** 2026-07-30
+**Entry Points:** `src/electron/main.ts`, `src/electron/preload.ts`, `src/renderer/index.html`
 
-This codemap covers GankMeDaddy's user interface: the system tray controller (native desktop UI).
+GankMeDaddy uses Electron for its Windows dashboard and native system tray. The coaching engine remains in the main process; the renderer receives only a narrow, context-isolated API from the preload bridge.
 
----
-
-## Desktop System Tray App
-
-`TrayApp` uses the lightweight `systray2` library to render a desktop menu containing position selection, volume controls, and system statuses.
-
-### Modules and Callbacks
+## Components
 
 | Component | Path | Purpose |
 |---|---|---|
-| **TrayApp Class** | [src/tray/trayApp.ts](file:///d:/GankMeDaddy/src/tray/trayApp.ts) | Initializes, starts, and kills the tray menu; parses clicks. |
-| **TrayCallbacks** | Interface in `trayApp.ts` | Dispatches actions to `index.ts` (setting position, toggling voice, adjusting volume, testing voice, launching GSI setups, quitting). |
+| Electron main process | `src/electron/main.ts` | Owns the window, tray, encrypted token storage, file picker, lifecycle, and IPC handlers. |
+| Preload bridge | `src/electron/preload.ts` | Exposes the allow-listed `window.gank` methods without enabling Node.js in the page. |
+| Renderer | `src/renderer/` | Implements Overview, Hero Pool, and Setup screens with local HTML, CSS, and JavaScript. |
+| Runtime coordinator | `src/app/GankMeDaddyApp.ts` | Connects UI actions to GSI, STRATZ, match tracking, coaching, and voice services. |
 
-### Callback Interface
+## Security Boundary
 
-```typescript
-export interface TrayCallbacks {
-  onSetPosition: (role: Role) => void;   // 'mid' | 'pos1' | 'pos3' | 'pos4' | 'pos5'
-  onToggleVoice: () => void;
-  onAdjustVolume: (delta: number) => void; // +/- 10
-  onSetupGSI: () => void;
-  onTestVoice: () => void;
-  onQuit: () => void;
-}
-```
+- `contextIsolation` and Chromium sandboxing are enabled.
+- `nodeIntegration` is disabled.
+- External navigation is blocked; approved HTTPS links open in the user's browser.
+- The STRATZ token is encrypted with Electron `safeStorage` where the operating system supports it.
+- The renderer receives only `tokenConfigured: true/false`, never the saved token.
+- Dota telemetry remains bound to `127.0.0.1`.
 
-### Menu Layout and Seq ID Mapping
+## Renderer Events
 
-The menu has a fixed 18-item layout (no dynamic hero items):
+The main process sends three event types through the preload bridge:
 
-| Index | Item | Type |
-|---|---|---|
-| 0 | `Status: ...` | Disabled label |
-| 1 | `Position: <role>` | Disabled label |
-| 2–6 | Position radio buttons (pos1, mid, pos3, pos4, pos5) | Clickable radio |
-| 7 | Separator | Disabled |
-| 8 | Voice ON/OFF | Toggle |
-| 9 | Aggression: X/10 | Disabled label |
-| 10 | Volume bar + percentage | Disabled label |
-| 11 | ▲ Volume Up (+10) | Button |
-| 12 | ▼ Volume Down (-10) | Button |
-| 13 | Separator | Disabled |
-| 14 | Setup GSI Config | Button |
-| 15 | Test Voice | Button |
-| 16 | Separator | Disabled |
-| 17 | Quit | Button |
+- `runtime:state` — lifecycle, connection, match, hero, status, and error state.
+- `runtime:snapshot` — current health, mana, K/D/A, last hits, GPM, level, items, and related telemetry.
+- `runtime:activity` — user-readable background events such as STRATZ preload and GSI installation.
 
-### Volume Bar Rendering
+## Packaging
 
-The helper `volumeBar(vol: number)` converts a 0–100 value into a 10-segment Unicode bar: `▰▰▰▰▰▰▰▰○○` for 80%.
+`electron-builder` creates an NSIS installer. Compiled code and renderer files live in the application archive; Piper and its model are copied to `resources/bin` so the executable can launch them at runtime.
 
-### Position Constants
-
-```typescript
-const POSITION_ORDER: Role[] = ['pos1', 'mid', 'pos3', 'pos4', 'pos5'];
-
-const POSITION_LABELS: Record<Role, string> = {
-  pos1: 'Safe Lane (Pos 1)',
-  mid: 'Mid Lane (Pos 2)',
-  pos3: 'Offlane (Pos 3)',
-  pos4: 'Soft Support (Pos 4)',
-  pos5: 'Hard Support (Pos 5)',
-};
-```
-
----
+Use `npm run verify` for the compiled Electron renderer/bridge smoke test and `npm run dist:win` for the Windows installer.
 
 ## Related Codemaps
-- **[Coaching Engine & API Backend](file:///d:/GankMeDaddy/docs/CODEMAPS/backend.md)**
-- **[External Integrations](file:///d:/GankMeDaddy/docs/CODEMAPS/integrations.md)**
+
+- [Coaching Engine & API Backend](backend.md)
+- [External Integrations](integrations.md)

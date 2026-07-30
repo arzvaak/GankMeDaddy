@@ -32,13 +32,16 @@ export class VoiceOutput {
   private cooldowns: Map<string, number> = new Map();
   private activeProcess: any = null;
 
-  private readonly piperExe = path.resolve(__dirname, '../../bin/piper/piper.exe');
-  private readonly piperModel = path.resolve(__dirname, '../../bin/piper/en_GB-jenny_dioco-medium.onnx');
+  private readonly piperExe: string;
+  private readonly piperModel: string;
 
-  constructor(enabled: boolean = true, rate: number = 1.0, volume: number = 80) {
+  constructor(enabled: boolean = true, rate: number = 1.0, volume: number = 80, resourceRoot?: string) {
     this.enabled = enabled;
     this.rate = rate === 1.0 ? 1.0 : rate;
     this.volume = Math.max(0, Math.min(100, volume));
+    const root = resourceRoot || path.resolve(__dirname, '../..');
+    this.piperExe = path.join(root, 'bin', 'piper', 'piper.exe');
+    this.piperModel = path.join(root, 'bin', 'piper', 'en_GB-jenny_dioco-medium.onnx');
   }
 
   /**
