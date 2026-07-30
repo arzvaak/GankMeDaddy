@@ -19,7 +19,18 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run verify
-      - name: Build and publish Windows installer
-        run: npx electron-builder --win nsis --publish always
+      - name: Build Windows installer
+        run: npm run dist:win
+      - name: Publish GitHub Release
+        shell: pwsh
+        run: |
+          $version = node -p "require('./package.json').version"
+          gh release create "v$version" `
+            "release/GankMeDaddy-$version-x64.exe" `
+            "release/GankMeDaddy-$version-x64.exe.blockmap" `
+            "release/latest.yml" `
+            --title "$version" `
+            --generate-notes `
+            --verify-tag
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
