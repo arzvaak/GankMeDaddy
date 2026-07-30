@@ -11,10 +11,10 @@ if (!window.gank && previewMode) {
   };
   const previewData = {
     config: previewConfig,
-    state: { running: false, gsiConnected: false, inMatch: false, heroId: null, heroName: null, status: 'Setup required', error: null, startedAt: null },
+    state: { running: false, gsiConnected: false, inMatch: false, inDraft: false, heroId: null, heroName: null, status: 'Setup required', error: null, startedAt: null },
     tokenConfigured: false,
     requirements: { token: false, steam: false, dotaPath: true, gsi: false, launchOptions: false, ready: false },
-    appVersion: '1.1.0-preview',
+    appVersion: '1.2.0-preview',
     heroes: [
       [126, 'Void Spirit', 'uni', 'mid'], [35, 'Sniper', 'agi', 'mid'], [11, 'Shadow Fiend', 'agi', 'mid'], [106, 'Ember Spirit', 'agi', 'mid'],
       [5, 'Crystal Maiden', 'int', 'pos5'], [31, 'Lich', 'int', 'pos5'], [30, 'Witch Doctor', 'int', 'pos5'], [37, 'Warlock', 'int', 'pos5'],
@@ -31,7 +31,7 @@ if (!window.gank && previewMode) {
     updateConfig: async partial => Object.assign(previewConfig, partial), setPosition: async role => Object.assign(previewConfig, { position: role }),
     toggleHero: async heroId => { previewConfig.enabledHeroIds = previewConfig.enabledHeroIds.includes(heroId) ? previewConfig.enabledHeroIds.filter(id => id !== heroId) : [...previewConfig.enabledHeroIds, heroId]; return previewConfig; },
     chooseDotaPath: async () => previewConfig.dota2Path, saveSetup: async () => previewData, copyText: () => undefined,
-    onState: () => undefined, onSnapshot: () => undefined, onDraft: () => undefined, onActivity: () => undefined,
+    onState: () => undefined, onSnapshot: () => undefined, onDraft: () => undefined, onCapture: () => undefined, onActivity: () => undefined,
   };
 }
 
@@ -44,6 +44,7 @@ const appState = {
   activities: [],
   wizardStep: 0,
   draft: null,
+  capture: null,
 };
 
 const requirementMeta = [
@@ -97,11 +98,14 @@ function renderDraft(draft) {
   const role = draft?.role || appState.config?.position || 'mid';
   const allies = draft?.allies || [];
   const enemies = draft?.enemies || [];
-  const live = draft?.source === 'gsi';
+  const live = draft?.source === 'gsi' || draft?.source === 'vision';
   $('#draft-role').textContent = roleName(role);
-  $('#draft-source-label').textContent = live ? 'LIVE DRAFT CONNECTED' : appState.runtime?.running ? 'LISTENING FOR PICKS' : 'WAITING FOR DOTA';
+  $('#draft-source-label').textContent = draft?.source === 'vision' ? 'DOTA WINDOW DETECTED' : draft?.source === 'gsi' ? 'LIVE DRAFT CONNECTED' : appState.runtime?.running ? 'LISTENING FOR PICKS' : 'WAITING FOR DOTA';
   $('#draft-status-dot').className = live ? 'status-dot live' : appState.runtime?.running ? 'status-dot online' : 'status-dot';
   $('#draft-message').textContent = draft?.message || 'Start the coach and enter hero selection. Picks appear here automatically—there is nothing to enter or click.';
+  $('#draft-detection-detail').textContent = draft?.source === 'vision' && Number.isFinite(draft.visionConfidence)
+    ? `Visual confidence ${Math.round(draft.visionConfidence * 100)}%`
+    : 'Updates automatically';
   $('#ally-team-name').textContent = draft?.localTeam ? `${draft.localTeam[0].toUpperCase()}${draft.localTeam.slice(1)}` : 'Your side';
   $('#enemy-team-name').textContent = draft?.localTeam === 'radiant' ? 'Dire' : draft?.localTeam === 'dire' ? 'Radiant' : 'Opposing side';
   $('#ally-draft-slots').innerHTML = Array.from({ length: 5 }, (_, index) => draftSlot(allies[index], index, 'ally')).join('');
@@ -431,8 +435,8 @@ async function init() {
   const data = await window.gank.bootstrap();
   appState.bootstrap = data;
   if (previewMode) appState.draft = {
-    active: true, source: 'gsi', role: 'mid', localTeam: 'radiant', allies: [5, 2], enemies: [59, 44, 31], bans: [], updatedAt: Date.now(),
-    message: 'Live draft detected. Re-ranked for mid.',
+    active: true, source: 'vision', visionConfidence: .91, role: 'mid', localTeam: 'radiant', allies: [5, 2], enemies: [59, 44, 31], bans: [], updatedAt: Date.now(),
+    message: 'Dota window draft detected. Re-ranked for mid.',
     recommendations: [
       { heroId: 22, heroName: 'Zeus', score: 57.8, laneScore: 61.4, overallScore: 55.1, confidence: 'High', reasons: ['Best measured matchup is into Phantom Assassin.'] },
       { heroId: 39, heroName: 'Queen of Pain', score: 54.9, laneScore: 57.2, overallScore: 53.4, confidence: 'High', reasons: ['Positive profile across 3 revealed opponents.'] },
@@ -451,6 +455,10 @@ async function init() {
     const firstLiveUpdate = appState.draft?.source !== 'gsi' && draft.source === 'gsi';
     renderDraft(draft);
     if (firstLiveUpdate) setPage('draft');
+  });
+  window.gank.onCapture(status => {
+    appState.capture = status;
+    $('#capture-status').textContent = status.message;
   });
   window.gank.onActivity(event => addActivity(event.message, event.timestamp));
   icons();

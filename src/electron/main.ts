@@ -6,15 +6,18 @@ import { AppConfig } from '../config/configManager';
 import { DOTA_HEROES } from '../coaching/heroesData';
 import { HERO_ROLES, SUPPORTED_HERO_IDS, Role } from '../coaching/types';
 import { strategyRegistry } from '../strategies';
+import { VisualDraftDetector, VisualDraftResult } from './visualDraftDetector';
 
 let mainWindow: BrowserWindow | null = null;
 let tray: Tray | null = null;
 let quitting = false;
 let coach: GankMeDaddyApp;
+let visualDraft: VisualDraftDetector;
 const smokeTest = process.argv.includes('--smoke-test');
 
 const rendererPath = path.resolve(__dirname, '../../src/renderer/index.html');
 const preloadPath = path.resolve(__dirname, 'preload.js');
+const rendererAssetPath = path.resolve(__dirname, '../../src/renderer/assets');
 
 function resourceRoot(): string {
   return app.isPackaged ? process.resourcesPath : path.resolve(__dirname, '../..');
@@ -125,6 +128,7 @@ function createWindow(): void {
   mainWindow.webContents.once('did-finish-load', async () => {
     if (!smokeTest || !mainWindow) return;
     try {
+      const recognitionReady = visualDraft.selfTest();
       const result = await mainWindow.webContents.executeJavaScript(`({
         title: document.title,
         pages: document.querySelectorAll('.page').length,
@@ -132,11 +136,12 @@ function createWindow(): void {
         tutorialSteps: document.querySelectorAll('.tutorial-step').length,
         bundledImages: [...document.images].filter(image => image.complete && image.naturalWidth > 0).length,
         draftPage: Boolean(document.querySelector('#page-draft')),
+        visualRecognition: ${recognitionReady},
         bridgeReady: typeof window.gank?.bootstrap === 'function' && typeof window.gank?.copyText === 'function'
       })`);
       console.log(`[SMOKE] ${JSON.stringify(result)}`);
       quitting = true;
-      app.exit(result.bridgeReady && result.draftPage && result.pages === 4 && result.tutorialSteps === 6 && result.bundledImages >= 4 ? 0 : 1);
+      app.exit(result.bridgeReady && result.visualRecognition && result.draftPage && result.pages === 4 && result.tutorialSteps === 6 && result.bundledImages >= 4 ? 0 : 1);
     } catch (error) {
       console.error('[SMOKE] Renderer verification failed:', error);
       quitting = true;
@@ -200,7 +205,20 @@ app.whenReady().then(async () => {
   }
 
   coach = new GankMeDaddyApp(resourceRoot());
-  coach.on('state', state => { send('runtime:state', state); buildTrayMenu(); });
+  visualDraft = new VisualDraftDetector(rendererAssetPath);
+  visualDraft.on('draft', (result: VisualDraftResult) => {
+    console.log(`[VISION] radiant=${result.radiant.join(',')} dire=${result.dire.join(',')} confidence=${result.confidence.toFixed(3)}`);
+    coach.processVisualDraft(result.radiant, result.dire, result.confidence);
+  });
+  visualDraft.on('status', status => send('runtime:capture', status));
+  coach.on('state', state => {
+    send('runtime:state', state);
+    // Player-mode GSI can omit the hero-selection transition as well as the
+    // draft object, so vision stays ready while coaching is enabled. The
+    // detector's fixed draft-header geometry rejects menus and the in-game HUD.
+    visualDraft.setActive(state.running);
+    buildTrayMenu();
+  });
   coach.on('snapshot', snapshot => send('runtime:snapshot', snapshot));
   coach.on('draft', draft => send('runtime:draft', draft));
   coach.on('activity', message => send('runtime:activity', { message, timestamp: Date.now() }));
@@ -222,6 +240,7 @@ app.whenReady().then(async () => {
 
 app.on('before-quit', () => {
   quitting = true;
+  visualDraft?.stop();
   coach?.stop();
 });
 

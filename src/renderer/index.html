@@ -108,7 +108,7 @@
             <div class="draft-live-label"><span class="status-dot" id="draft-status-dot"></span><span id="draft-source-label">WAITING FOR DOTA</span></div>
             <p class="eyebrow">AUTOMATIC COUNTER-PICK ENGINE</p>
             <h2>Your strongest answer, before the timer runs out.</h2>
-            <p id="draft-message">Start the coach and enter hero selection. Picks appear here automatically—there is nothing to enter or click.</p>
+            <p id="draft-message">Start the coach and enter hero selection. The app reads revealed picks directly from the Dota window—there is nothing to enter or click.</p>
           </div>
           <div class="draft-role-card"><i data-lucide="crosshair"></i><span>RECOMMENDING FOR</span><strong id="draft-role">Mid</strong><small>Uses your coach profile</small></div>
         </div>
@@ -127,7 +127,7 @@
 
         <div class="draft-content-grid">
           <article class="panel recommendations-panel">
-            <div class="panel-heading"><div><p class="eyebrow">LIVE RANKING</p><h3>Best available picks</h3></div><span class="automatic-chip"><i data-lucide="refresh-cw"></i> Updates automatically</span></div>
+              <div class="panel-heading"><div><p class="eyebrow">LIVE RANKING</p><h3>Best available picks</h3></div><span class="automatic-chip"><i data-lucide="refresh-cw"></i><span id="draft-detection-detail">Updates automatically</span></span></div>
             <div id="draft-recommendations" class="recommendation-list"></div>
           </article>
           <aside class="draft-insights">
@@ -138,7 +138,7 @@
               <p>Each recommendation blends matchup history against the revealed enemy heroes with the position selected in your coach profile.</p>
             </article>
             <article class="panel automatic-notice">
-              <i data-lucide="radio-tower"></i><div><strong>Zero-input mode</strong><span>Dota sends picks over the local GSI connection. This screen never asks you to recreate the draft.</span></div>
+              <i data-lucide="scan-eye"></i><div><strong>Automatic visual mode</strong><span id="capture-status">The app reads only the Dota window during hero selection. Borderless Window gives the most reliable capture.</span></div>
             </article>
           </aside>
         </div>
@@ -191,7 +191,7 @@
             </article>
 
             <article class="tutorial-step" data-step-panel="3">
-              <div class="step-columns compact"><div class="step-art"><img src="assets/local-telemetry.webp" alt="Local game telemetry flowing into a coaching beacon"></div><div class="step-copy"><p class="step-kicker">STEP 4 · LOCAL TELEMETRY</p><h3>Install the GSI connection file.</h3><p>This creates one readable text file inside Dota’s configuration folder. It tells Dota to send live match state to this app on your own computer.</p><div class="data-list"><span><i data-lucide="check"></i> Health, mana and level</span><span><i data-lucide="check"></i> Items, abilities and cooldowns</span><span><i data-lucide="check"></i> K/D/A, last hits and game time</span><span><i data-lucide="x"></i> No keyboard, microphone or screen capture</span></div></div></div>
+              <div class="step-columns compact"><div class="step-art"><img src="assets/local-telemetry.webp" alt="Local game telemetry flowing into a coaching beacon"></div><div class="step-copy"><p class="step-kicker">STEP 4 · LOCAL TELEMETRY</p><h3>Install the GSI connection file.</h3><p>This creates one readable text file inside Dota’s configuration folder. It tells Dota to send live match state to this app on your own computer.</p><div class="data-list"><span><i data-lucide="check"></i> Health, mana and level</span><span><i data-lucide="check"></i> Items, abilities and cooldowns</span><span><i data-lucide="check"></i> Ranked, Unranked and Turbo draft detection</span><span><i data-lucide="scan-eye"></i> During picks, only the Dota window is read locally</span></div></div></div>
               <div class="install-card"><div><i data-lucide="file-cog"></i><div><strong>gamestate_integration_gankmedaddy.cfg</strong><span id="gsi-location">Waiting for a valid Dota folder</span></div></div><button class="button primary" id="install-gsi"><i data-lucide="download"></i><span>Install GSI config</span></button></div>
             </article>
 

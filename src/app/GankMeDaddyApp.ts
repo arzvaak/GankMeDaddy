@@ -21,6 +21,7 @@ export interface RuntimeState {
   status: string;
   error: string | null;
   startedAt: number | null;
+  inDraft: boolean;
 }
 
 export class GankMeDaddyApp extends EventEmitter {
@@ -41,6 +42,7 @@ export class GankMeDaddyApp extends EventEmitter {
     status: 'Setup required',
     error: null,
     startedAt: null,
+    inDraft: false,
   };
 
   constructor(private readonly resourceRoot?: string) {
@@ -83,11 +85,14 @@ export class GankMeDaddyApp extends EventEmitter {
         void this.handleDraftUpdate(state);
       });
       this.gsi.on('heroPicking', (state) => {
+        this.setState({ inDraft: true, status: 'Hero selection — reading the draft' });
         void this.handleDraftUpdate(state);
       });
+      this.gsi.on('preGame', () => this.setState({ inDraft: false }));
       this.tracker.on('matchStart', (heroId: number) => {
         const profile = this.tracker?.getStratzContext()?.proProfile;
         coach.onMatchStart(heroId, profile?.isGuideMode || false, !!profile);
+        this.setState({ inDraft: false });
         this.setHero(heroId, true, `Live match — ${HERO_NAMES[heroId] || `Hero ${heroId}`}`);
       });
       this.tracker.on('heroDetected', (heroId: number) => {
@@ -152,6 +157,7 @@ export class GankMeDaddyApp extends EventEmitter {
       status: 'Coach stopped',
       error: null,
       startedAt: null,
+      inDraft: false,
     });
   }
 
@@ -192,12 +198,24 @@ export class GankMeDaddyApp extends EventEmitter {
     return destFile;
   }
 
-  private async handleDraftUpdate(state: GameState): Promise<void> {
+  processVisualDraft(radiant: number[], dire: number[], confidence: number): void {
+    if (!this.state.running) return;
+    const base = this.lastDraftGameState || {};
+    const team = (ids: number[]) => Object.fromEntries(ids.map((id, index) => [`pick${index}_id`, id]));
+    const state: GameState = {
+      ...base,
+      draft: { team2: team(radiant), team3: team(dire) },
+    };
+    if (!this.state.inDraft) this.setState({ inDraft: true, status: 'Hero selection — reading the Dota window' });
+    void this.handleDraftUpdate(state, 'vision', confidence);
+  }
+
+  private async handleDraftUpdate(state: GameState, source: 'gsi' | 'vision' = 'gsi', confidence?: number): Promise<void> {
     this.lastDraftGameState = state;
     const cfg = this.config.get();
-    const result: DraftState = await this.draft.analyze(state, cfg.position, cfg.enabledHeroIds);
-    this.emit('draft', result);
-    if (result.source === 'gsi') {
+    const result: DraftState = await this.draft.analyze(state, cfg.position, cfg.enabledHeroIds, source);
+    this.emit('draft', confidence === undefined ? result : { ...result, visionConfidence: confidence });
+    if (result.source === 'gsi' || result.source === 'vision') {
       this.setState({ status: 'Live draft — recommendations updating' });
       const best = result.recommendations[0];
       if (best && best.heroId !== this.lastSpokenDraftHero) {

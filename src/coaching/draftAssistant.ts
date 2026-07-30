@@ -15,7 +15,7 @@ export interface DraftRecommendation {
 
 export interface DraftState {
   active: boolean;
-  source: 'gsi' | 'waiting';
+  source: 'gsi' | 'vision' | 'waiting';
   role: Role;
   localTeam: 'radiant' | 'dire' | null;
   allies: number[];
@@ -45,7 +45,7 @@ export class DraftAssistant {
     })).then(() => undefined);
   }
 
-  async analyze(state: GameState, role: Role, enabledHeroIds: number[]): Promise<DraftState> {
+  async analyze(state: GameState, role: Role, enabledHeroIds: number[], detectedSource: 'gsi' | 'vision' = 'gsi'): Promise<DraftState> {
     const radiant = this.extractPicks(state.draft?.team2 || state.draft?.radiant);
     const dire = this.extractPicks(state.draft?.team3 || state.draft?.dire);
     const bans = [
@@ -66,7 +66,7 @@ export class DraftAssistant {
 
     return {
       active: state.map?.game_state === 'DOTA_GAMERULES_STATE_HERO_SELECTION',
-      source: hasDraft ? 'gsi' : 'waiting',
+      source: hasDraft ? detectedSource : 'waiting',
       role,
       localTeam,
       allies,
@@ -75,7 +75,7 @@ export class DraftAssistant {
       recommendations,
       updatedAt: Date.now(),
       message: hasDraft
-        ? `Live draft detected. Re-ranked for ${this.roleName(role)}.`
+        ? `${detectedSource === 'vision' ? 'Dota window draft detected' : 'Live draft detected'}. Re-ranked for ${this.roleName(role)}.`
         : 'Hero selection detected. Waiting for Dota to publish the first draft pick.',
     };
   }
