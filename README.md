@@ -1,6 +1,6 @@
 # GankMeDaddy — Dota 2 Live Coaching Agent
 
-A lightweight Windows 11 system tray application that provides **real-time voice coaching** for all five positions, using **role-aware pro player match data** and STRATZ pro guides as benchmarks.
+A Windows 11 desktop application that provides **real-time voice coaching** for all five positions, using **role-aware pro player match data** and STRATZ pro guides as benchmarks.
 
 ## Features
 
@@ -14,7 +14,7 @@ A lightweight Windows 11 system tray application that provides **real-time voice
 - **Rune/Lotus/Shrine timers** with voice reminders.
 - **Creep score checkpoints** at 10/20/30 min vs pro player pace.
 - **Priority-based TTS queue** with interrupt protection and cooldown deduplication.
-- **Lightweight System Tray** — Position selector (pos1/mid/pos3/pos4/pos5), voice toggle, volume +/- controls, setup GSI, or close the application.
+- **Electron control center** — Live telemetry, position and voice controls, hero-pool management, secure first-run setup, and minimize-to-tray behavior.
 
 ## Supported Heroes
 
@@ -77,29 +77,32 @@ A lightweight Windows 11 system tray application that provides **real-time voice
 npm install
 ```
 
-### 2. Configure `.env`
-The `.env` file should contain your STRATZ API token and Steam ID:
+### 2. Launch the desktop app
+
+```bash
+npm start
 ```
-STRATZ_API_TOKEN=your_token_here
-STEAM_ACCOUNT_ID=your_steam_id
-```
+
+Open **Setup** in the app and enter your STRATZ token, Steam account ID, and Dota 2 installation folder. The token is protected with the operating system's credential encryption and is never sent to the renderer after it is saved.
 
 ### 3. Dota 2 Setup
 Add `-gamestateintegration` to Dota 2's Steam launch options:
 1. Open Steam → Right-click Dota 2 → Properties
 2. In **Launch Options**, add: `-gamestateintegration`
 
-The app will auto-copy the GSI config file to your Dota 2 directory on first run.
+Use **Install GSI config** in the desktop app to write the local integration file.
 
-### 4. Run
+### 4. Build the Windows installer
 ```bash
-npm start
+npm run dist:win
 ```
 
-The app will:
+The installer is written to `release/GankMeDaddy-1.0.0-x64.exe`. The installed app will:
 1. Initialize GSI Server on port 3001 (listening on localhost `127.0.0.1` only).
 2. Load configuration and pre-fetch pro match data/STRATZ guides for enabled heroes in the background.
-3. Show the system tray icon with status alerts.
+3. Show the Electron dashboard and continue running from the system tray when the window is closed.
+
+For the original terminal-only workflow, create `.env` with `STRATZ_API_TOKEN` and optionally `STEAM_ACCOUNT_ID`, then run `npm run start:cli`.
 
 ---
 
@@ -125,11 +128,14 @@ Dota 2 Client (GSI) ───► GSIServer (Port 3001, localhost)
 
 ## Architecture & Code Map
 
-For a detailed breakdown of the components, read our **[Codemaps Index](file:///d:/GankMeDaddy/docs/CODEMAPS/INDEX.md)**.
+For a detailed breakdown of the components, read our **[Codemaps Index](docs/CODEMAPS/INDEX.md)**.
 
 ```
 src/
-├── index.ts                   # Entry point and event coordinator
+├── electron/                  # Desktop window, native tray, and secure IPC bridge
+├── renderer/                  # Dashboard, hero pool, and setup interface
+├── app/GankMeDaddyApp.ts      # Reusable coaching runtime coordinator
+├── index.ts                   # Optional terminal-only entry point
 ├── config/configManager.ts    # Settings persistence (%APPDATA%)
 ├── stratz/
 │   ├── stratzClient.ts        # STRATZ GraphQL client with timeouts/retries
@@ -147,8 +153,7 @@ src/
 │   ├── index.ts               # Registry — maps hero ID → strategy
 │   ├── voidSpiritStrategy.ts, sniperStrategy.ts, ...
 │   └── (+30 more for pos1/3/4/5)
-├── voice/voiceOutput.ts       # Offline Piper & OneCore TTS manager (volume-aware)
-└── tray/trayApp.ts            # System tray UI controller (position + volume)
+└── voice/voiceOutput.ts       # Offline Piper & OneCore TTS manager (volume-aware)
 ```
 
 ## License

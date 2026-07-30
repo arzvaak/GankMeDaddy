@@ -14,6 +14,16 @@ const CONFIG_DIR = path.join(
 );
 const CONFIG_FILE = path.join(CONFIG_DIR, 'config.json');
 
+function getDefaultDotaPath(): string {
+  const candidates = [
+    path.join(process.env['ProgramFiles(x86)'] || '', 'Steam', 'steamapps', 'common', 'dota 2 beta'),
+    path.join(process.env.ProgramFiles || '', 'Steam', 'steamapps', 'common', 'dota 2 beta'),
+    'D:\\Programs\\Steam\\steamapps\\common\\dota 2 beta',
+  ];
+
+  return candidates.find(candidate => candidate && fs.existsSync(candidate)) || candidates[0];
+}
+
 export interface AppConfig {
   /** Config schema version for migration */
   configVersion?: number;
@@ -41,13 +51,13 @@ export interface AppConfig {
 
 const DEFAULT_CONFIG: AppConfig = {
   configVersion: 2,
-  steamAccountId: 82744607,
+  steamAccountId: Number(process.env.STEAM_ACCOUNT_ID) || 0,
   enabledHeroIds: [...SUPPORTED_HERO_IDS],
   aggressionLevel: 10,
   voiceEnabled: true,
   voiceRate: 1.0,
   voiceVolume: 80,
-  dota2Path: 'D:\\Programs\\Steam\\steamapps\\common\\dota 2 beta',
+  dota2Path: getDefaultDotaPath(),
   gsiPort: 3001,
   stratzPollInterval: 10,
   position: 'mid',
