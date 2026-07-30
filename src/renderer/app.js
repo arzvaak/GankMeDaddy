@@ -1,7 +1,8 @@
 const $ = selector => document.querySelector(selector);
 const $$ = selector => [...document.querySelectorAll(selector)];
+const previewMode = new URLSearchParams(window.location.search).has('preview');
 
-if (!window.gank && new URLSearchParams(window.location.search).has('preview')) {
+if (!window.gank && previewMode) {
   const previewConfig = {
     steamAccountId: 0, enabledHeroIds: [126, 35, 11, 106, 17, 114, 39, 22, 145],
     aggressionLevel: 8, voiceEnabled: true, voiceRate: 1, voiceVolume: 80,
@@ -22,6 +23,7 @@ if (!window.gank && new URLSearchParams(window.location.search).has('preview')) 
       [44, 'Phantom Assassin', 'agi', 'pos1'], [41, 'Faceless Void', 'agi', 'pos1'], [67, 'Spectre', 'agi', 'pos1'], [8, 'Juggernaut', 'agi', 'pos1'],
     ].map(([id, name, attr, role]) => ({ id, name, attr, role })),
   };
+  previewData.draftHeroes = previewData.heroes.map(hero => ({ ...hero, portrait: `assets/heroes/${hero.id}.png` }));
   window.gank = {
     bootstrap: async () => previewData, refresh: async () => previewData,
     start: async () => ({ ...previewData.state, running: true, status: 'Ready — waiting for Dota 2' }), stop: async () => previewData.state,
@@ -29,7 +31,7 @@ if (!window.gank && new URLSearchParams(window.location.search).has('preview')) 
     updateConfig: async partial => Object.assign(previewConfig, partial), setPosition: async role => Object.assign(previewConfig, { position: role }),
     toggleHero: async heroId => { previewConfig.enabledHeroIds = previewConfig.enabledHeroIds.includes(heroId) ? previewConfig.enabledHeroIds.filter(id => id !== heroId) : [...previewConfig.enabledHeroIds, heroId]; return previewConfig; },
     chooseDotaPath: async () => previewConfig.dota2Path, saveSetup: async () => previewData, copyText: () => undefined,
-    onState: () => undefined, onSnapshot: () => undefined, onActivity: () => undefined,
+    onState: () => undefined, onSnapshot: () => undefined, onDraft: () => undefined, onActivity: () => undefined,
   };
 }
 
@@ -41,6 +43,7 @@ const appState = {
   search: '',
   activities: [],
   wizardStep: 0,
+  draft: null,
 };
 
 const requirementMeta = [
@@ -68,6 +71,7 @@ function toast(message) {
 function setPage(page) {
   const labels = {
     overview: ['COMMAND CENTER', 'Overview'],
+    draft: ['LIVE DRAFT INTELLIGENCE', 'Draft assistant'],
     heroes: ['STRATEGY MODULES', 'Hero pool'],
     setup: ['GET MATCH-READY', 'Guided setup'],
   };
@@ -76,6 +80,45 @@ function setPage(page) {
   $('#page-eyebrow').textContent = labels[page][0];
   $('#page-title').textContent = labels[page][1];
   window.scrollTo(0, 0);
+}
+
+function draftHero(heroId) {
+  return appState.bootstrap?.draftHeroes?.find(hero => hero.id === heroId) || { id: heroId, name: `Hero ${heroId}`, portrait: `assets/heroes/${heroId}.png` };
+}
+
+function draftSlot(heroId, index, side) {
+  if (!heroId) return `<div class="draft-slot empty"><span>${index + 1}</span><i data-lucide="circle-dashed"></i><small>Waiting</small></div>`;
+  const hero = draftHero(heroId);
+  return `<div class="draft-slot filled ${side}"><img src="${escapeHtml(hero.portrait)}" alt=""><span>${index + 1}</span><strong>${escapeHtml(hero.name)}</strong></div>`;
+}
+
+function renderDraft(draft) {
+  appState.draft = draft;
+  const role = draft?.role || appState.config?.position || 'mid';
+  const allies = draft?.allies || [];
+  const enemies = draft?.enemies || [];
+  const live = draft?.source === 'gsi';
+  $('#draft-role').textContent = roleName(role);
+  $('#draft-source-label').textContent = live ? 'LIVE DRAFT CONNECTED' : appState.runtime?.running ? 'LISTENING FOR PICKS' : 'WAITING FOR DOTA';
+  $('#draft-status-dot').className = live ? 'status-dot live' : appState.runtime?.running ? 'status-dot online' : 'status-dot';
+  $('#draft-message').textContent = draft?.message || 'Start the coach and enter hero selection. Picks appear here automatically—there is nothing to enter or click.';
+  $('#ally-team-name').textContent = draft?.localTeam ? `${draft.localTeam[0].toUpperCase()}${draft.localTeam.slice(1)}` : 'Your side';
+  $('#enemy-team-name').textContent = draft?.localTeam === 'radiant' ? 'Dire' : draft?.localTeam === 'dire' ? 'Radiant' : 'Opposing side';
+  $('#ally-draft-slots').innerHTML = Array.from({ length: 5 }, (_, index) => draftSlot(allies[index], index, 'ally')).join('');
+  $('#enemy-draft-slots').innerHTML = Array.from({ length: 5 }, (_, index) => draftSlot(enemies[index], index, 'enemy')).join('');
+
+  const recommendations = draft?.recommendations || [];
+  $('#draft-recommendations').innerHTML = recommendations.length ? recommendations.map((item, index) => {
+    const hero = draftHero(item.heroId);
+    return `<article class="recommendation-card ${index === 0 ? 'best' : ''}">
+      <div class="recommendation-rank"><span>${String(index + 1).padStart(2, '0')}</span>${index === 0 ? '<i data-lucide="crown"></i>' : ''}</div>
+      <img src="${escapeHtml(hero.portrait)}" alt="">
+      <div class="recommendation-copy"><div><strong>${escapeHtml(item.heroName)}</strong><span>${escapeHtml(item.confidence)} confidence</span></div><p>${escapeHtml(item.reasons[0] || 'Strong role fit for the revealed draft.')}</p><div class="recommendation-bars"><span>Lane <i><b style="width:${item.laneScore}%"></b></i><em>${item.laneScore}</em></span><span>Overall <i><b style="width:${item.overallScore}%"></b></i><em>${item.overallScore}</em></span></div></div>
+      <div class="fit-score"><strong>${item.score}</strong><span>FIT</span></div>
+    </article>`;
+  }).join('') : `<div class="draft-empty"><i data-lucide="scan-search"></i><strong>Watching hero selection</strong><p>${enemies.length ? `No enabled ${escapeHtml(roleName(role))} heroes remain available.` : 'Recommendations appear the moment Dota publishes a revealed pick.'}</p><span>No clicks. No duplicate draft entry.</span></div>`;
+  document.querySelector('[data-page="draft"]')?.classList.toggle('has-live-draft', live);
+  icons();
 }
 
 function goToSetup(step) {
@@ -119,6 +162,7 @@ function renderConfig(config) {
     ? `${config.dota2Path}\\game\\dota\\cfg\\gamestate_integration`
     : 'Waiting for a valid Dota folder';
   renderHeroes();
+  renderDraft(appState.draft);
 }
 
 function renderSnapshot(snapshot) {
@@ -386,6 +430,15 @@ async function init() {
   renderActivities();
   const data = await window.gank.bootstrap();
   appState.bootstrap = data;
+  if (previewMode) appState.draft = {
+    active: true, source: 'gsi', role: 'mid', localTeam: 'radiant', allies: [5, 2], enemies: [59, 44, 31], bans: [], updatedAt: Date.now(),
+    message: 'Live draft detected. Re-ranked for mid.',
+    recommendations: [
+      { heroId: 22, heroName: 'Zeus', score: 57.8, laneScore: 61.4, overallScore: 55.1, confidence: 'High', reasons: ['Best measured matchup is into Phantom Assassin.'] },
+      { heroId: 39, heroName: 'Queen of Pain', score: 54.9, laneScore: 57.2, overallScore: 53.4, confidence: 'High', reasons: ['Positive profile across 3 revealed opponents.'] },
+      { heroId: 106, heroName: 'Ember Spirit', score: 52.6, laneScore: 54.8, overallScore: 51.2, confidence: 'Medium', reasons: ['Keeps the recommendation aligned with 2 revealed allied picks.'] },
+    ],
+  };
   $('#app-version').textContent = `v${data.appVersion}`;
   renderConfig(data.config);
   renderRuntime(data.state);
@@ -394,6 +447,11 @@ async function init() {
   if (!data.config.onboardingComplete || !data.requirements.ready) setPage('setup');
   window.gank.onState(renderRuntime);
   window.gank.onSnapshot(renderSnapshot);
+  window.gank.onDraft(draft => {
+    const firstLiveUpdate = appState.draft?.source !== 'gsi' && draft.source === 'gsi';
+    renderDraft(draft);
+    if (firstLiveUpdate) setPage('draft');
+  });
   window.gank.onActivity(event => addActivity(event.message, event.timestamp));
   icons();
 }

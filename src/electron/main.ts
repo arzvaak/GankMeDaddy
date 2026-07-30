@@ -66,6 +66,7 @@ function bootstrap() {
       const hero = DOTA_HEROES.find(candidate => candidate.id === id);
       return { id, name: hero?.name || `Hero ${id}`, attr: hero?.attr || 'uni', role: HERO_ROLES[id] || 'mid' };
     }),
+    draftHeroes: DOTA_HEROES.map(hero => ({ ...hero, portrait: `assets/heroes/${hero.id}.png` })),
   };
 }
 
@@ -130,11 +131,12 @@ function createWindow(): void {
         heroCards: document.querySelectorAll('.hero-card').length,
         tutorialSteps: document.querySelectorAll('.tutorial-step').length,
         bundledImages: [...document.images].filter(image => image.complete && image.naturalWidth > 0).length,
+        draftPage: Boolean(document.querySelector('#page-draft')),
         bridgeReady: typeof window.gank?.bootstrap === 'function' && typeof window.gank?.copyText === 'function'
       })`);
       console.log(`[SMOKE] ${JSON.stringify(result)}`);
       quitting = true;
-      app.exit(result.bridgeReady && result.pages === 3 && result.tutorialSteps === 6 && result.bundledImages >= 4 ? 0 : 1);
+      app.exit(result.bridgeReady && result.draftPage && result.pages === 4 && result.tutorialSteps === 6 && result.bundledImages >= 4 ? 0 : 1);
     } catch (error) {
       console.error('[SMOKE] Renderer verification failed:', error);
       quitting = true;
@@ -200,6 +202,7 @@ app.whenReady().then(async () => {
   coach = new GankMeDaddyApp(resourceRoot());
   coach.on('state', state => { send('runtime:state', state); buildTrayMenu(); });
   coach.on('snapshot', snapshot => send('runtime:snapshot', snapshot));
+  coach.on('draft', draft => send('runtime:draft', draft));
   coach.on('activity', message => send('runtime:activity', { message, timestamp: Date.now() }));
 
   registerIpc();

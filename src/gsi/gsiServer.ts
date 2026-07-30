@@ -18,6 +18,7 @@ export class GSIServer extends EventEmitter {
   private server: HttpServer | null = null;
   private lastGameState: string = ''; // track to detect game start/end
   private connected: boolean = false;
+  private lastDraftSignature: string = '';
 
   constructor(options: GSIServerOptions) {
     super();
@@ -57,6 +58,7 @@ export class GSIServer extends EventEmitter {
       this.server = null;
       this.connected = false;
       this.lastGameState = '';
+      this.lastDraftSignature = '';
       console.log('[GSI] Server stopped');
     }
   }
@@ -88,6 +90,14 @@ export class GSIServer extends EventEmitter {
 
       // Emit the full game state for processing
       this.emit('gameStateUpdate', gameState);
+
+      if (gameState.draft) {
+        const signature = JSON.stringify(gameState.draft);
+        if (signature !== this.lastDraftSignature) {
+          this.lastDraftSignature = signature;
+          this.emit('draftUpdate', gameState);
+        }
+      }
     });
 
     // Health check endpoint

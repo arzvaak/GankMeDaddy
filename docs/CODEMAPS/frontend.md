@@ -11,7 +11,7 @@ GankMeDaddy uses Electron for its Windows dashboard and native system tray. The 
 |---|---|---|
 | Electron main process | `src/electron/main.ts` | Owns the window, tray, encrypted token storage, file picker, lifecycle, and IPC handlers. |
 | Preload bridge | `src/electron/preload.ts` | Exposes the allow-listed `window.gank` methods without enabling Node.js in the page. |
-| Renderer | `src/renderer/` | Implements Overview, Hero Pool, and Setup screens with local HTML, CSS, and JavaScript. |
+| Renderer | `src/renderer/` | Implements Overview, automatic Draft Assistant, Hero Pool, and Setup screens with local HTML, CSS, JavaScript, and bundled hero portraits. |
 | Runtime coordinator | `src/app/GankMeDaddyApp.ts` | Connects UI actions to GSI, STRATZ, match tracking, coaching, and voice services. |
 
 ## Security Boundary
@@ -30,6 +30,11 @@ The main process sends three event types through the preload bridge:
 - `runtime:state` — lifecycle, connection, match, hero, status, and error state.
 - `runtime:snapshot` — current health, mana, K/D/A, last hits, GPM, level, items, and related telemetry.
 - `runtime:activity` — user-readable background events such as STRATZ preload and GSI installation.
+- `runtime:draft` — normalized automatic team picks and the latest ranked counter-pick recommendations.
+
+## Automatic Draft Assistant
+
+`src/coaching/draftAssistant.ts` consumes the GSI `draft` object, infers the player's side, excludes picked/banned heroes, filters candidates to the selected position and enabled coaching pool, then combines direct and full-draft matchup performance. Matchup rows are fetched from OpenDota once and kept in memory so updates during the pick timer are immediate. The renderer has no manual hero-entry controls.
 
 ## Guided Setup
 

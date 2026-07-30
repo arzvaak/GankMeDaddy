@@ -27,6 +27,8 @@ GankMeDaddy queries the STRATZ API to compile statistical baselines for pro game
 
 The Dota 2 client communicates with GankMeDaddy via a local loopback server using standard GSI configuration files.
 
+The generated configuration subscribes to `draft` in addition to the live match channels. `GSIServer` emits a deduplicated `draftUpdate` whenever picks or bans change; the desktop UI consumes the resulting recommendations automatically. Existing config files are refreshed on coach startup so users do not need to reinstall them after this upgrade.
+
 - **Auto-Installation**: On startup, [`index.ts`](file:///d:/GankMeDaddy/src/index.ts) verifies if `gamestate_integration_gankmedaddy.cfg` exists in the steam directory. If missing, it writes the configuration directly to:
   `[SteamPath]\steamapps\common\dota 2 beta\game\dota\cfg\gamestate_integration\gamestate_integration_gankmedaddy.cfg`
 - **Telemetry Buffering**: Ingests player state, game clock, item slots, ability cooldowns, and building structures.

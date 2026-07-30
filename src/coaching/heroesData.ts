@@ -130,5 +130,6 @@ export const DOTA_HEROES: HeroData[] = [
   { id: 137, name: "Primal Beast", attr: "str" },
   { id: 138, name: "Muerta", attr: "int" },
   { id: 131, name: "Ringmaster", attr: "int" },
-  { id: 145, name: "Kez", attr: "agi" }
+  { id: 145, name: "Kez", attr: "agi" },
+  { id: 155, name: "Largo", attr: "str" }
 ];

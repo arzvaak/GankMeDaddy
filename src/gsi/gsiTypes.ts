@@ -147,6 +147,26 @@ export interface GSIBuildings {
   dire?: Record<string, GSIBuilding>;
 }
 
+export interface GSIDraftTeam {
+  home_team?: boolean;
+  [key: string]: number | string | boolean | undefined;
+}
+
+/** Draft information is keyed as team2/team3 by Dota. Some clients also
+ * expose radiant/dire aliases, so consumers intentionally support both. */
+export interface GSIDraft {
+  activeteam?: number;
+  activeteam_time_remaining?: number;
+  radiant_bonus_time?: number;
+  dire_bonus_time?: number;
+  team2?: GSIDraftTeam;
+  team3?: GSIDraftTeam;
+  radiant?: GSIDraftTeam;
+  dire?: GSIDraftTeam;
+  pick?: boolean;
+  [key: string]: number | string | boolean | GSIDraftTeam | undefined;
+}
+
 /**
  * Complete Game State payload from Dota 2 GSI.
  * When playing (not spectating), only local player data is available.
@@ -159,6 +179,7 @@ export interface GameState {
   abilities?: GSIAbilities;
   items?: GSIItems;
   buildings?: GSIBuildings;
+  draft?: GSIDraft;
   previously?: Partial<GameState>;
   added?: Partial<GameState>;
 }

@@ -17,6 +17,7 @@
 
       <nav aria-label="Primary navigation">
         <button class="nav-item active" data-page="overview"><i data-lucide="layout-dashboard"></i><span>Overview</span></button>
+        <button class="nav-item" data-page="draft"><i data-lucide="scan-search"></i><span>Draft assistant</span><b class="auto-badge">AUTO</b></button>
         <button class="nav-item" data-page="heroes"><i data-lucide="shield"></i><span>Hero pool</span></button>
         <button class="nav-item" data-page="setup"><i data-lucide="route"></i><span>Guided setup</span><b id="nav-setup-badge">5</b></button>
       </nav>
@@ -98,6 +99,48 @@
             <div class="panel-heading"><div><p class="eyebrow">SIGNAL LOG</p><h3>Recent activity</h3></div><button class="icon-button" id="clear-activity" title="Clear activity"><i data-lucide="trash-2"></i></button></div>
             <div class="activity-list" id="activity-list"></div>
           </article>
+        </div>
+      </section>
+
+      <section class="page draft-page" id="page-draft">
+        <div class="draft-hero">
+          <div>
+            <div class="draft-live-label"><span class="status-dot" id="draft-status-dot"></span><span id="draft-source-label">WAITING FOR DOTA</span></div>
+            <p class="eyebrow">AUTOMATIC COUNTER-PICK ENGINE</p>
+            <h2>Your strongest answer, before the timer runs out.</h2>
+            <p id="draft-message">Start the coach and enter hero selection. Picks appear here automatically—there is nothing to enter or click.</p>
+          </div>
+          <div class="draft-role-card"><i data-lucide="crosshair"></i><span>RECOMMENDING FOR</span><strong id="draft-role">Mid</strong><small>Uses your coach profile</small></div>
+        </div>
+
+        <div class="draft-board">
+          <article class="draft-team allies">
+            <div class="draft-team-heading"><div><span>YOUR TEAM</span><strong id="ally-team-name">Allies</strong></div><i data-lucide="shield-check"></i></div>
+            <div class="draft-slots" id="ally-draft-slots"></div>
+          </article>
+          <div class="draft-versus"><span></span><b>VS</b><span></span></div>
+          <article class="draft-team enemies">
+            <div class="draft-team-heading"><div><span>OPPONENTS</span><strong id="enemy-team-name">Enemies</strong></div><i data-lucide="swords"></i></div>
+            <div class="draft-slots" id="enemy-draft-slots"></div>
+          </article>
+        </div>
+
+        <div class="draft-content-grid">
+          <article class="panel recommendations-panel">
+            <div class="panel-heading"><div><p class="eyebrow">LIVE RANKING</p><h3>Best available picks</h3></div><span class="automatic-chip"><i data-lucide="refresh-cw"></i> Updates automatically</span></div>
+            <div id="draft-recommendations" class="recommendation-list"></div>
+          </article>
+          <aside class="draft-insights">
+            <article class="panel draft-explainer">
+              <div class="explainer-icon"><i data-lucide="brain-circuit"></i></div>
+              <p class="eyebrow">HOW IT DECIDES</p><h3>Lane first. Draft second.</h3>
+              <div class="score-legend"><span><i></i>Direct matchup</span><span><i></i>All enemies</span><span><i></i>Role fit</span></div>
+              <p>Each recommendation blends matchup history against the revealed enemy heroes with the position selected in your coach profile.</p>
+            </article>
+            <article class="panel automatic-notice">
+              <i data-lucide="radio-tower"></i><div><strong>Zero-input mode</strong><span>Dota sends picks over the local GSI connection. This screen never asks you to recreate the draft.</span></div>
+            </article>
+          </aside>
         </div>
       </section>
 

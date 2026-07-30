@@ -15,6 +15,8 @@ A Windows 11 desktop application that provides **real-time voice coaching** for 
 - **Creep score checkpoints** at 10/20/30 min vs pro player pace.
 - **Priority-based TTS queue** with interrupt protection and cooldown deduplication.
 - **Electron control center** — Live telemetry, position and voice controls, hero-pool management, secure first-run setup, and minimize-to-tray behavior.
+- **Automatic Draft Assistant** — Detects GSI draft picks without duplicate input, ranks enabled heroes for the selected position, and explains lane and overall matchup strength using cached OpenDota matchup history.
+- **Bundled hero portraits** — The complete portrait set is packaged locally for an instant, offline-safe draft display.
 - **Guided match-ready tutorial** — Explains every required input, validates the Dota folder, installs GSI, provides the Steam launch option, and tracks readiness step by step.
 - **Bundled original artwork** — A cohesive command-center visual system ships with the app and remains fully offline.
 
@@ -100,7 +102,7 @@ npm run dist:win
 ```
 
 The installer is written to `release/GankMeDaddy-1.0.0-x64.exe`. The installed app will:
-1. Initialize GSI Server on port 3001 (listening on localhost `127.0.0.1` only).
+1. Initialize GSI Server on port 3001 (listening on localhost `127.0.0.1` only) and keep the installed config upgraded with the `draft` channel.
 2. Load configuration and pre-fetch pro match data/STRATZ guides for enabled heroes in the background.
 3. Show the Electron dashboard and continue running from the system tray when the window is closed.
 
@@ -122,7 +124,8 @@ Dota 2 Client (GSI) ───► GSIServer (Port 3001, localhost)
 
 1. **Dota 2 GSI** sends real-time game state to `127.0.0.1:3001` every 0.5s.
 2. **Match Tracker** converts GSI data into normalized snapshots.
-3. **STRATZ Pro Analyzer** provides position-specific benchmarks from representative professional players or falls back to STRATZ Pro Guides.
+3. **Draft Assistant** listens for revealed picks, resolves the local team, and reranks position-valid heroes automatically after each change.
+4. **STRATZ Pro Analyzer** provides position-specific benchmarks from representative professional players or falls back to STRATZ Pro Guides.
 4. **Coaching Engine** evaluates general, build-path, counter, and hero-specific rules.
 5. **Voice Output** plays speech via Windows SAPI or neural Piper TTS with queue deduplication.
 
@@ -148,6 +151,7 @@ src/
 │   └── gsiTypes.ts            # TypeScript types for GSI
 ├── coaching/
 │   ├── coachingEngine.ts      # Main coaching engine (role-aware)
+│   ├── draftAssistant.ts      # Automatic draft parsing and counter-pick ranking
 │   ├── matchTracker.ts        # Match/draft orchestrator
 │   ├── heroesData.ts          # Static hero index metadata
 │   └── types.ts               # Shared types (Role, HERO_IDS, HERO_ROLES)
@@ -161,3 +165,5 @@ src/
 ## License
 
 Licensed under the [GNU General Public License v3.0](LICENSE).
+
+Dota 2 hero portraits and related game imagery are property of Valve Corporation and are bundled solely for hero identification in this community project. GankMeDaddy is not affiliated with or endorsed by Valve.

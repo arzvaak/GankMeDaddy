@@ -8,7 +8,9 @@ import { GSIServer } from '../gsi/gsiServer';
 import { MatchTracker } from '../coaching/matchTracker';
 import { CoachingEngine } from '../coaching/coachingEngine';
 import { VoiceOutput } from '../voice/voiceOutput';
-import { HERO_NAMES, MatchSnapshot, Role } from '../coaching/types';
+import { HERO_NAMES, HERO_ROLES, MatchSnapshot, Role } from '../coaching/types';
+import { DraftAssistant, DraftState } from '../coaching/draftAssistant';
+import { GameState } from '../gsi/gsiTypes';
 
 export interface RuntimeState {
   running: boolean;
@@ -27,6 +29,9 @@ export class GankMeDaddyApp extends EventEmitter {
   private tracker: MatchTracker | null = null;
   private voice: VoiceOutput | null = null;
   private pro: ProAnalyzer | null = null;
+  private draft = new DraftAssistant();
+  private lastDraftGameState: GameState | null = null;
+  private lastSpokenDraftHero: number | null = null;
   private state: RuntimeState = {
     running: false,
     gsiConnected: false,
@@ -59,6 +64,11 @@ export class GankMeDaddyApp extends EventEmitter {
 
     try {
       const cfg = this.config.get();
+      if (fs.existsSync(path.join(cfg.dota2Path, 'game', 'dota'))) {
+        // Keep existing installations current without asking the player to
+        // revisit setup when new GSI channels are introduced.
+        this.setupGSI();
+      }
       const stratz = new StratzClient({ apiToken: apiToken.trim() });
       this.pro = new ProAnalyzer(stratz);
       this.voice = new VoiceOutput(cfg.voiceEnabled, cfg.voiceRate, cfg.voiceVolume, this.resourceRoot);
@@ -69,6 +79,12 @@ export class GankMeDaddyApp extends EventEmitter {
       const coach = new CoachingEngine(this.voice);
 
       this.gsi.on('connected', () => this.setState({ gsiConnected: true, status: 'Dota 2 connected' }));
+      this.gsi.on('draftUpdate', (state) => {
+        void this.handleDraftUpdate(state);
+      });
+      this.gsi.on('heroPicking', (state) => {
+        void this.handleDraftUpdate(state);
+      });
       this.tracker.on('matchStart', (heroId: number) => {
         const profile = this.tracker?.getStratzContext()?.proProfile;
         coach.onMatchStart(heroId, profile?.isGuideMode || false, !!profile);
@@ -83,6 +99,8 @@ export class GankMeDaddyApp extends EventEmitter {
       });
       this.tracker.on('matchEnd', () => {
         coach.onMatchEnd();
+        this.lastDraftGameState = null;
+        this.lastSpokenDraftHero = null;
         this.setState({ inMatch: false, heroId: null, heroName: null, status: 'Match complete — waiting for Dota 2' });
       });
 
@@ -92,6 +110,8 @@ export class GankMeDaddyApp extends EventEmitter {
         error: null,
         startedAt: Date.now(),
       });
+
+      void this.draft.warm(cfg.enabledHeroIds.filter(id => HERO_ROLES[id] === cfg.position));
 
       void (async () => {
         try {
@@ -121,6 +141,8 @@ export class GankMeDaddyApp extends EventEmitter {
     this.voice?.setEnabled(false);
     this.voice = null;
     this.pro = null;
+    this.lastDraftGameState = null;
+    this.lastSpokenDraftHero = null;
     this.setState({
       running: false,
       gsiConnected: false,
@@ -145,12 +167,14 @@ export class GankMeDaddyApp extends EventEmitter {
   setPosition(role: Role): AppConfig {
     const cfg = this.updateConfig({ position: role });
     this.voice?.speakNow(`Position set to ${role === 'mid' ? 'mid' : role}.`);
+    if (this.lastDraftGameState) void this.handleDraftUpdate(this.lastDraftGameState);
     return cfg;
   }
 
   toggleHero(heroId: number): AppConfig {
     const enabled = this.config.toggleHero(heroId);
     if (enabled) void this.pro?.analyzeHero(heroId).catch(() => undefined);
+    if (this.lastDraftGameState) void this.handleDraftUpdate(this.lastDraftGameState);
     return this.config.get();
   }
 
@@ -163,9 +187,25 @@ export class GankMeDaddyApp extends EventEmitter {
     const destDir = path.join(cfg.dota2Path, 'game', 'dota', 'cfg', 'gamestate_integration');
     const destFile = path.join(destDir, 'gamestate_integration_gankmedaddy.cfg');
     fs.mkdirSync(destDir, { recursive: true });
-    fs.writeFileSync(destFile, `"GankMeDaddy"\n{\n  "uri" "http://127.0.0.1:${cfg.gsiPort}/"\n  "timeout" "5.0"\n  "buffer" "0.1"\n  "throttle" "0.1"\n  "heartbeat" "30.0"\n  "data"\n  {\n    "provider" "1"\n    "map" "1"\n    "player" "1"\n    "hero" "1"\n    "abilities" "1"\n    "items" "1"\n    "buildings" "1"\n  }\n}\n`, 'utf8');
+    fs.writeFileSync(destFile, `"GankMeDaddy"\n{\n  "uri" "http://127.0.0.1:${cfg.gsiPort}/"\n  "timeout" "5.0"\n  "buffer" "0.1"\n  "throttle" "0.1"\n  "heartbeat" "30.0"\n  "data"\n  {\n    "provider" "1"\n    "map" "1"\n    "player" "1"\n    "hero" "1"\n    "abilities" "1"\n    "items" "1"\n    "buildings" "1"\n    "draft" "1"\n  }\n}\n`, 'utf8');
     this.emit('activity', `GSI configuration installed to ${destFile}`);
     return destFile;
+  }
+
+  private async handleDraftUpdate(state: GameState): Promise<void> {
+    this.lastDraftGameState = state;
+    const cfg = this.config.get();
+    const result: DraftState = await this.draft.analyze(state, cfg.position, cfg.enabledHeroIds);
+    this.emit('draft', result);
+    if (result.source === 'gsi') {
+      this.setState({ status: 'Live draft — recommendations updating' });
+      const best = result.recommendations[0];
+      if (best && best.heroId !== this.lastSpokenDraftHero) {
+        this.lastSpokenDraftHero = best.heroId;
+        const voiceRole: Record<Role, string> = { pos1: 'carry', mid: 'mid', pos3: 'offlane', pos4: 'soft support', pos5: 'hard support' };
+        this.voice?.speakNow(`Best ${voiceRole[cfg.position]} pick: ${best.heroName}. ${best.reasons[0] || ''}`);
+      }
+    }
   }
 
   private setHero(heroId: number, inMatch: boolean, status: string): void {

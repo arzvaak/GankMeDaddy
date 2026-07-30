@@ -15,5 +15,6 @@ contextBridge.exposeInMainWorld('gank', {
   copyText: (value: string) => clipboard.writeText(value),
   onState: (callback: (value: unknown) => void) => ipcRenderer.on('runtime:state', (_event, value) => callback(value)),
   onSnapshot: (callback: (value: unknown) => void) => ipcRenderer.on('runtime:snapshot', (_event, value) => callback(value)),
+  onDraft: (callback: (value: unknown) => void) => ipcRenderer.on('runtime:draft', (_event, value) => callback(value)),
   onActivity: (callback: (value: unknown) => void) => ipcRenderer.on('runtime:activity', (_event, value) => callback(value)),
 });
