@@ -7,6 +7,8 @@ contextBridge.exposeInMainWorld('gank', {
   stop: () => ipcRenderer.invoke('coach:stop'),
   testVoice: () => ipcRenderer.invoke('coach:test-voice'),
   setupGSI: () => ipcRenderer.invoke('coach:setup-gsi'),
+  setEnemyOverride: (slot: number, heroId: number | null) => ipcRenderer.invoke('draft:set-enemy-override', slot, heroId),
+  clearEnemyOverrides: () => ipcRenderer.invoke('draft:clear-enemy-overrides'),
   updateConfig: (partial: unknown) => ipcRenderer.invoke('config:update', partial),
   setPosition: (role: string) => ipcRenderer.invoke('config:set-position', role),
   toggleHero: (heroId: number) => ipcRenderer.invoke('config:toggle-hero', heroId),

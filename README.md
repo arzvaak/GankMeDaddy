@@ -16,6 +16,7 @@ A Windows 11 desktop application that provides **real-time voice coaching** for 
 - **Priority-based TTS queue** with interrupt protection and cooldown deduplication.
 - **Electron control center** — Live telemetry, position and voice controls, hero-pool management, secure first-run setup, and minimize-to-tray behavior.
 - **Automatic Draft Assistant** — Reads revealed picks from the Dota window in Ranked All Pick, Unranked All Pick, and Turbo; ranks enabled heroes for the selected position; and explains lane and overall matchup strength using cached OpenDota matchup history.
+- **Manual correction with priority** — Click any opponent slot to choose a hero. That slot overrides vision/GSI while every untouched slot remains automatic; clear one slot or return all five to auto at any time.
 - **Bundled hero portraits** — The complete portrait set is packaged locally for an instant, offline-safe draft display.
 - **Guided match-ready tutorial** — Explains every required input, validates the Dota folder, installs GSI, provides the Steam launch option, and tracks readiness step by step.
 - **Bundled original artwork** — A cohesive command-center visual system ships with the app and remains fully offline.
@@ -101,7 +102,7 @@ Use **Install GSI config** in the desktop app to write the local integration fil
 npm run dist:win
 ```
 
-The installer is written to `release/GankMeDaddy-1.2.0-x64.exe`. The installed app will:
+The installer is written to `release/GankMeDaddy-1.3.0-x64.exe`. The installed app will:
 1. Initialize GSI Server on port 3001 (listening on localhost `127.0.0.1` only) and keep the installed config upgraded with the `draft` channel.
 2. Load configuration and pre-fetch pro match data/STRATZ guides for enabled heroes in the background.
 3. Show the Electron dashboard and continue running from the system tray when the window is closed.
@@ -125,7 +126,7 @@ Dota 2 Client (GSI) ───► GSIServer (Port 3001, localhost)
 1. **Dota 2 GSI** sends real-time game state to `127.0.0.1:3001` every 0.5s.
 2. **Match Tracker** converts GSI data into normalized snapshots.
 3. **Visual Draft Reader** captures only the Dota window during hero selection and recognizes the ten top-bar portraits locally. Frames are not stored or uploaded.
-4. **Draft Assistant** resolves the local team and reranks position-valid heroes automatically after each revealed pick.
+4. **Draft Assistant** merges any slot-level manual corrections over the live picks, then reranks position-valid heroes after every change.
 5. **STRATZ Pro Analyzer** provides position-specific benchmarks from representative professional players or falls back to STRATZ Pro Guides.
 6. **Coaching Engine** evaluates general, build-path, counter, and hero-specific rules.
 7. **Voice Output** plays speech via Windows SAPI or neural Piper TTS with queue deduplication.

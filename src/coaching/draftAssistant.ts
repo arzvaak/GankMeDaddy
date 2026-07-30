@@ -20,6 +20,8 @@ export interface DraftState {
   localTeam: 'radiant' | 'dire' | null;
   allies: number[];
   enemies: number[];
+  enemySlots: number[];
+  manualEnemySlots: Array<number | null>;
   bans: number[];
   recommendations: DraftRecommendation[];
   updatedAt: number;
@@ -29,6 +31,10 @@ export interface DraftState {
 interface MatchupRow { hero_id: number; games_played: number; wins: number; }
 
 const OPENDOTA = 'https://api.opendota.com/api';
+
+export function mergeEnemySlots(detected: number[], manual: Array<number | null>): number[] {
+  return Array.from({ length: 5 }, (_, index) => manual[index] || detected[index] || 0);
+}
 
 export class DraftAssistant {
   private matchups = new Map<number, Map<number, MatchupRow>>();
@@ -45,16 +51,26 @@ export class DraftAssistant {
     })).then(() => undefined);
   }
 
-  async analyze(state: GameState, role: Role, enabledHeroIds: number[], detectedSource: 'gsi' | 'vision' = 'gsi'): Promise<DraftState> {
-    const radiant = this.extractPicks(state.draft?.team2 || state.draft?.radiant);
-    const dire = this.extractPicks(state.draft?.team3 || state.draft?.dire);
+  async analyze(
+    state: GameState,
+    role: Role,
+    enabledHeroIds: number[],
+    detectedSource: 'gsi' | 'vision' = 'gsi',
+    manualEnemySlots: Array<number | null> = Array(5).fill(null),
+  ): Promise<DraftState> {
+    const radiantSlots = this.extractPickSlots(state.draft?.team2 || state.draft?.radiant);
+    const direSlots = this.extractPickSlots(state.draft?.team3 || state.draft?.dire);
+    const radiant = radiantSlots.filter(id => id > 0);
+    const dire = direSlots.filter(id => id > 0);
     const bans = [
       ...this.extractBans(state.draft?.team2 || state.draft?.radiant),
       ...this.extractBans(state.draft?.team3 || state.draft?.dire),
     ];
     const localTeam = this.localTeam(state);
     const allies = localTeam === 'dire' ? dire : radiant;
-    const enemies = localTeam === 'dire' ? radiant : dire;
+    const detectedEnemySlots = localTeam === 'dire' ? radiantSlots : direSlots;
+    const enemySlots = mergeEnemySlots(detectedEnemySlots, manualEnemySlots);
+    const enemies = [...new Set(enemySlots.filter(id => id > 0))];
     const candidates = enabledHeroIds.filter(id => HERO_ROLES[id] === role && !allies.includes(id) && !enemies.includes(id) && !bans.includes(id));
 
     if (candidates.length) await this.warm(candidates);
@@ -62,7 +78,7 @@ export class DraftAssistant {
       .map(id => this.score(id, enemies, allies))
       .sort((a, b) => b.score - a.score)
       .slice(0, 5);
-    const hasDraft = radiant.length + dire.length + bans.length > 0;
+    const hasDraft = radiant.length + dire.length + bans.length > 0 || manualEnemySlots.some(Boolean);
 
     return {
       active: state.map?.game_state === 'DOTA_GAMERULES_STATE_HERO_SELECTION',
@@ -71,11 +87,13 @@ export class DraftAssistant {
       localTeam,
       allies,
       enemies,
+      enemySlots,
+      manualEnemySlots: Array.from({ length: 5 }, (_, index) => manualEnemySlots[index] || null),
       bans,
       recommendations,
       updatedAt: Date.now(),
-      message: hasDraft
-        ? `${detectedSource === 'vision' ? 'Dota window draft detected' : 'Live draft detected'}. Re-ranked for ${this.roleName(role)}.`
+      message: enemies.length
+        ? `${manualEnemySlots.some(Boolean) ? 'Manual enemy picks take priority' : detectedSource === 'vision' ? 'Dota window draft detected' : 'Live draft detected'}. Re-ranked for ${this.roleName(role)}.`
         : 'Hero selection detected. Waiting for Dota to publish the first draft pick.',
     };
   }
@@ -119,8 +137,16 @@ export class DraftAssistant {
     };
   }
 
-  private extractPicks(team?: GSIDraftTeam): number[] {
-    return this.extract(team, /pick\d+_id$/i);
+  private extractPickSlots(team?: GSIDraftTeam): number[] {
+    const slots = Array(5).fill(0) as number[];
+    if (!team) return slots;
+    for (const [key, value] of Object.entries(team)) {
+      const match = key.match(/pick(\d+)_id$/i);
+      if (!match) continue;
+      const slot = Number(match[1]);
+      if (slot >= 0 && slot < slots.length) slots[slot] = Number(value) || 0;
+    }
+    return slots;
   }
 
   private extractBans(team?: GSIDraftTeam): number[] {

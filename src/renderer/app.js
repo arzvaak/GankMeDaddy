@@ -14,7 +14,7 @@ if (!window.gank && previewMode) {
     state: { running: false, gsiConnected: false, inMatch: false, inDraft: false, heroId: null, heroName: null, status: 'Setup required', error: null, startedAt: null },
     tokenConfigured: false,
     requirements: { token: false, steam: false, dotaPath: true, gsi: false, launchOptions: false, ready: false },
-    appVersion: '1.2.0-preview',
+    appVersion: '1.3.0-preview',
     heroes: [
       [126, 'Void Spirit', 'uni', 'mid'], [35, 'Sniper', 'agi', 'mid'], [11, 'Shadow Fiend', 'agi', 'mid'], [106, 'Ember Spirit', 'agi', 'mid'],
       [5, 'Crystal Maiden', 'int', 'pos5'], [31, 'Lich', 'int', 'pos5'], [30, 'Witch Doctor', 'int', 'pos5'], [37, 'Warlock', 'int', 'pos5'],
@@ -28,6 +28,8 @@ if (!window.gank && previewMode) {
     bootstrap: async () => previewData, refresh: async () => previewData,
     start: async () => ({ ...previewData.state, running: true, status: 'Ready — waiting for Dota 2' }), stop: async () => previewData.state,
     testVoice: async () => undefined, setupGSI: async () => 'Preview GSI configuration',
+    setEnemyOverride: async (slot, heroId) => ({ ...appState.draft, enemySlots: appState.draft.enemySlots.map((id, index) => index === slot ? heroId || 0 : id), manualEnemySlots: appState.draft.manualEnemySlots.map((id, index) => index === slot ? heroId : id) }),
+    clearEnemyOverrides: async () => ({ ...appState.draft, manualEnemySlots: Array(5).fill(null) }),
     updateConfig: async partial => Object.assign(previewConfig, partial), setPosition: async role => Object.assign(previewConfig, { position: role }),
     toggleHero: async heroId => { previewConfig.enabledHeroIds = previewConfig.enabledHeroIds.includes(heroId) ? previewConfig.enabledHeroIds.filter(id => id !== heroId) : [...previewConfig.enabledHeroIds, heroId]; return previewConfig; },
     chooseDotaPath: async () => previewConfig.dota2Path, saveSetup: async () => previewData, copyText: () => undefined,
@@ -45,6 +47,7 @@ const appState = {
   wizardStep: 0,
   draft: null,
   capture: null,
+  enemyPickerSlot: null,
 };
 
 const requirementMeta = [
@@ -87,10 +90,11 @@ function draftHero(heroId) {
   return appState.bootstrap?.draftHeroes?.find(hero => hero.id === heroId) || { id: heroId, name: `Hero ${heroId}`, portrait: `assets/heroes/${heroId}.png` };
 }
 
-function draftSlot(heroId, index, side) {
-  if (!heroId) return `<div class="draft-slot empty"><span>${index + 1}</span><i data-lucide="circle-dashed"></i><small>Waiting</small></div>`;
+function draftSlot(heroId, index, side, manual = false) {
+  const tag = side === 'enemy' ? 'button type="button" data-enemy-slot="' + index + '"' : 'div';
+  if (!heroId) return `<${tag} class="draft-slot empty ${side}"><span>${index + 1}</span><i data-lucide="${side === 'enemy' ? 'mouse-pointer-click' : 'circle-dashed'}"></i><small>${side === 'enemy' ? 'Choose' : 'Waiting'}</small></${side === 'enemy' ? 'button' : 'div'}>`;
   const hero = draftHero(heroId);
-  return `<div class="draft-slot filled ${side}"><img src="${escapeHtml(hero.portrait)}" alt=""><span>${index + 1}</span><strong>${escapeHtml(hero.name)}</strong></div>`;
+  return `<${tag} class="draft-slot filled ${side} ${manual ? 'manual' : ''}"><img src="${escapeHtml(hero.portrait)}" alt=""><span>${index + 1}</span>${manual ? '<em>MANUAL</em>' : ''}<strong>${escapeHtml(hero.name)}</strong></${side === 'enemy' ? 'button' : 'div'}>`;
 }
 
 function renderDraft(draft) {
@@ -98,18 +102,21 @@ function renderDraft(draft) {
   const role = draft?.role || appState.config?.position || 'mid';
   const allies = draft?.allies || [];
   const enemies = draft?.enemies || [];
+  const enemySlots = draft?.enemySlots || enemies;
+  const manualEnemySlots = draft?.manualEnemySlots || Array(5).fill(null);
   const live = draft?.source === 'gsi' || draft?.source === 'vision';
   $('#draft-role').textContent = roleName(role);
   $('#draft-source-label').textContent = draft?.source === 'vision' ? 'DOTA WINDOW DETECTED' : draft?.source === 'gsi' ? 'LIVE DRAFT CONNECTED' : appState.runtime?.running ? 'LISTENING FOR PICKS' : 'WAITING FOR DOTA';
   $('#draft-status-dot').className = live ? 'status-dot live' : appState.runtime?.running ? 'status-dot online' : 'status-dot';
-  $('#draft-message').textContent = draft?.message || 'Start the coach and enter hero selection. Picks appear here automatically—there is nothing to enter or click.';
+  $('#draft-message').textContent = draft?.message || 'Picks appear automatically. If vision gets one wrong, click an opponent slot to correct it.';
   $('#draft-detection-detail').textContent = draft?.source === 'vision' && Number.isFinite(draft.visionConfidence)
     ? `Visual confidence ${Math.round(draft.visionConfidence * 100)}%`
     : 'Updates automatically';
   $('#ally-team-name').textContent = draft?.localTeam ? `${draft.localTeam[0].toUpperCase()}${draft.localTeam.slice(1)}` : 'Your side';
   $('#enemy-team-name').textContent = draft?.localTeam === 'radiant' ? 'Dire' : draft?.localTeam === 'dire' ? 'Radiant' : 'Opposing side';
   $('#ally-draft-slots').innerHTML = Array.from({ length: 5 }, (_, index) => draftSlot(allies[index], index, 'ally')).join('');
-  $('#enemy-draft-slots').innerHTML = Array.from({ length: 5 }, (_, index) => draftSlot(enemies[index], index, 'enemy')).join('');
+  $('#enemy-draft-slots').innerHTML = Array.from({ length: 5 }, (_, index) => draftSlot(enemySlots[index], index, 'enemy', Boolean(manualEnemySlots[index]))).join('');
+  $('#clear-enemy-overrides').hidden = !manualEnemySlots.some(Boolean);
 
   const recommendations = draft?.recommendations || [];
   $('#draft-recommendations').innerHTML = recommendations.length ? recommendations.map((item, index) => {
@@ -120,9 +127,30 @@ function renderDraft(draft) {
       <div class="recommendation-copy"><div><strong>${escapeHtml(item.heroName)}</strong><span>${escapeHtml(item.confidence)} confidence</span></div><p>${escapeHtml(item.reasons[0] || 'Strong role fit for the revealed draft.')}</p><div class="recommendation-bars"><span>Lane <i><b style="width:${item.laneScore}%"></b></i><em>${item.laneScore}</em></span><span>Overall <i><b style="width:${item.overallScore}%"></b></i><em>${item.overallScore}</em></span></div></div>
       <div class="fit-score"><strong>${item.score}</strong><span>FIT</span></div>
     </article>`;
-  }).join('') : `<div class="draft-empty"><i data-lucide="scan-search"></i><strong>Watching hero selection</strong><p>${enemies.length ? `No enabled ${escapeHtml(roleName(role))} heroes remain available.` : 'Recommendations appear the moment Dota publishes a revealed pick.'}</p><span>No clicks. No duplicate draft entry.</span></div>`;
+  }).join('') : `<div class="draft-empty"><i data-lucide="scan-search"></i><strong>Watching hero selection</strong><p>${enemies.length ? `No enabled ${escapeHtml(roleName(role))} heroes remain available.` : 'Recommendations appear the moment Dota publishes a revealed pick, or after you choose an enemy manually.'}</p><span>Automatic by default · manual correction anytime</span></div>`;
   document.querySelector('[data-page="draft"]')?.classList.toggle('has-live-draft', live);
   icons();
+}
+
+function renderEnemyPicker() {
+  const query = $('#enemy-hero-search').value.trim().toLowerCase();
+  const selected = new Set(appState.draft?.manualEnemySlots?.filter(Boolean) || []);
+  const heroes = (appState.bootstrap?.draftHeroes || []).filter(hero => hero.name.toLowerCase().includes(query));
+  $('#enemy-hero-grid').innerHTML = heroes.map(hero => `<button type="button" data-pick-enemy-hero="${hero.id}" class="${selected.has(hero.id) ? 'selected' : ''}"><img src="${escapeHtml(hero.portrait)}" alt=""><span>${escapeHtml(hero.name)}</span>${selected.has(hero.id) ? '<i data-lucide="check"></i>' : ''}</button>`).join('');
+  icons();
+}
+
+function openEnemyPicker(slot) {
+  appState.enemyPickerSlot = slot;
+  $('#enemy-hero-picker').hidden = false;
+  $('#enemy-hero-search').value = '';
+  renderEnemyPicker();
+  requestAnimationFrame(() => $('#enemy-hero-search').focus());
+}
+
+function closeEnemyPicker() {
+  $('#enemy-hero-picker').hidden = true;
+  appState.enemyPickerSlot = null;
 }
 
 function goToSetup(step) {
@@ -427,6 +455,31 @@ function bindEvents() {
     setPage('overview');
     toast('Setup complete. The coach is listening for Dota 2.');
   });
+  $('#enemy-draft-slots').addEventListener('click', event => {
+    const slot = event.target.closest('[data-enemy-slot]');
+    if (slot) openEnemyPicker(Number(slot.dataset.enemySlot));
+  });
+  $('#enemy-hero-search').addEventListener('input', renderEnemyPicker);
+  $('#enemy-hero-grid').addEventListener('click', async event => {
+    const button = event.target.closest('[data-pick-enemy-hero]');
+    if (!button || appState.enemyPickerSlot === null) return;
+    renderDraft(await window.gank.setEnemyOverride(appState.enemyPickerSlot, Number(button.dataset.pickEnemyHero)));
+    closeEnemyPicker();
+    toast('Manual enemy pick applied. Recommendations updated.');
+  });
+  $$('[data-close-enemy-picker]').forEach(button => button.addEventListener('click', closeEnemyPicker));
+  $('#clear-enemy-slot').addEventListener('click', async () => {
+    if (appState.enemyPickerSlot === null) return;
+    renderDraft(await window.gank.setEnemyOverride(appState.enemyPickerSlot, null));
+    closeEnemyPicker();
+    toast('Slot returned to automatic detection.');
+  });
+  $('#clear-enemy-overrides').addEventListener('click', async () => {
+    const draft = await window.gank.clearEnemyOverrides();
+    if (draft) renderDraft(draft);
+    toast('All enemy slots returned to automatic detection.');
+  });
+  document.addEventListener('keydown', event => { if (event.key === 'Escape') closeEnemyPicker(); });
 }
 
 async function init() {
@@ -435,7 +488,7 @@ async function init() {
   const data = await window.gank.bootstrap();
   appState.bootstrap = data;
   if (previewMode) appState.draft = {
-    active: true, source: 'vision', visionConfidence: .91, role: 'mid', localTeam: 'radiant', allies: [5, 2], enemies: [59, 44, 31], bans: [], updatedAt: Date.now(),
+    active: true, source: 'vision', visionConfidence: .91, role: 'mid', localTeam: 'radiant', allies: [5, 2], enemies: [59, 44, 31], enemySlots: [59, 44, 31, 0, 0], manualEnemySlots: [null, 44, null, null, null], bans: [], updatedAt: Date.now(),
     message: 'Dota window draft detected. Re-ranked for mid.',
     recommendations: [
       { heroId: 22, heroName: 'Zeus', score: 57.8, laneScore: 61.4, overallScore: 55.1, confidence: 'High', reasons: ['Best measured matchup is into Phantom Assassin.'] },

@@ -129,19 +129,23 @@ function createWindow(): void {
     if (!smokeTest || !mainWindow) return;
     try {
       const recognitionReady = visualDraft.selfTest();
-      const result = await mainWindow.webContents.executeJavaScript(`({
-        title: document.title,
-        pages: document.querySelectorAll('.page').length,
-        heroCards: document.querySelectorAll('.hero-card').length,
-        tutorialSteps: document.querySelectorAll('.tutorial-step').length,
-        bundledImages: [...document.images].filter(image => image.complete && image.naturalWidth > 0).length,
-        draftPage: Boolean(document.querySelector('#page-draft')),
-        visualRecognition: ${recognitionReady},
-        bridgeReady: typeof window.gank?.bootstrap === 'function' && typeof window.gank?.copyText === 'function'
-      })`);
+      const result = await mainWindow.webContents.executeJavaScript(`(() => {
+        document.querySelector('[data-enemy-slot="0"]')?.click();
+        return {
+          title: document.title,
+          pages: document.querySelectorAll('.page').length,
+          heroCards: document.querySelectorAll('.hero-card').length,
+          tutorialSteps: document.querySelectorAll('.tutorial-step').length,
+          bundledImages: [...document.images].filter(image => image.complete && image.naturalWidth > 0).length,
+          draftPage: Boolean(document.querySelector('#page-draft')),
+          manualPicker: !document.querySelector('#enemy-hero-picker')?.hidden && document.querySelectorAll('[data-pick-enemy-hero]').length >= 100 && typeof window.gank?.setEnemyOverride === 'function',
+          visualRecognition: ${recognitionReady},
+          bridgeReady: typeof window.gank?.bootstrap === 'function' && typeof window.gank?.copyText === 'function'
+        };
+      })()`);
       console.log(`[SMOKE] ${JSON.stringify(result)}`);
       quitting = true;
-      app.exit(result.bridgeReady && result.visualRecognition && result.draftPage && result.pages === 4 && result.tutorialSteps === 6 && result.bundledImages >= 4 ? 0 : 1);
+      app.exit(result.bridgeReady && result.visualRecognition && result.draftPage && result.manualPicker && result.pages === 4 && result.tutorialSteps === 6 && result.bundledImages >= 4 ? 0 : 1);
     } catch (error) {
       console.error('[SMOKE] Renderer verification failed:', error);
       quitting = true;
@@ -174,6 +178,8 @@ function registerIpc(): void {
   });
   ipcMain.handle('coach:test-voice', () => coach.testVoice());
   ipcMain.handle('coach:setup-gsi', () => coach.setupGSI());
+  ipcMain.handle('draft:set-enemy-override', (_event, slot: number, heroId: number | null) => coach.setEnemyOverride(slot, heroId));
+  ipcMain.handle('draft:clear-enemy-overrides', () => coach.clearManualEnemyOverrides());
   ipcMain.handle('config:update', (_event, partial: Partial<AppConfig>) => coach.updateConfig(partial));
   ipcMain.handle('config:set-position', (_event, role: Role) => coach.setPosition(role));
   ipcMain.handle('config:toggle-hero', (_event, heroId: number) => coach.toggleHero(heroId));
@@ -208,7 +214,7 @@ app.whenReady().then(async () => {
   visualDraft = new VisualDraftDetector(rendererAssetPath);
   visualDraft.on('draft', (result: VisualDraftResult) => {
     console.log(`[VISION] radiant=${result.radiant.join(',')} dire=${result.dire.join(',')} confidence=${result.confidence.toFixed(3)}`);
-    coach.processVisualDraft(result.radiant, result.dire, result.confidence);
+    coach.processVisualDraft(result.radiantSlots, result.direSlots, result.confidence);
   });
   visualDraft.on('status', status => send('runtime:capture', status));
   coach.on('state', state => {

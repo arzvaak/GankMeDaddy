@@ -108,7 +108,7 @@
             <div class="draft-live-label"><span class="status-dot" id="draft-status-dot"></span><span id="draft-source-label">WAITING FOR DOTA</span></div>
             <p class="eyebrow">AUTOMATIC COUNTER-PICK ENGINE</p>
             <h2>Your strongest answer, before the timer runs out.</h2>
-            <p id="draft-message">Start the coach and enter hero selection. The app reads revealed picks directly from the Dota window—there is nothing to enter or click.</p>
+            <p id="draft-message">The app reads revealed picks automatically. If vision gets one wrong, click an opponent slot to correct it.</p>
           </div>
           <div class="draft-role-card"><i data-lucide="crosshair"></i><span>RECOMMENDING FOR</span><strong id="draft-role">Mid</strong><small>Uses your coach profile</small></div>
         </div>
@@ -120,7 +120,7 @@
           </article>
           <div class="draft-versus"><span></span><b>VS</b><span></span></div>
           <article class="draft-team enemies">
-            <div class="draft-team-heading"><div><span>OPPONENTS</span><strong id="enemy-team-name">Enemies</strong></div><i data-lucide="swords"></i></div>
+            <div class="draft-team-heading"><div><span>OPPONENTS · CLICK TO CORRECT</span><strong id="enemy-team-name">Enemies</strong></div><button class="clear-overrides" id="clear-enemy-overrides" type="button" hidden><i data-lucide="rotate-ccw"></i> Use auto</button></div>
             <div class="draft-slots" id="enemy-draft-slots"></div>
           </article>
         </div>
@@ -212,6 +212,15 @@
         </div>
       </section>
     </main>
+  </div>
+  <div class="hero-picker" id="enemy-hero-picker" hidden>
+    <button class="hero-picker-backdrop" type="button" data-close-enemy-picker aria-label="Close hero picker"></button>
+    <section class="hero-picker-panel" role="dialog" aria-modal="true" aria-labelledby="enemy-picker-title">
+      <header><div><p class="eyebrow">MANUAL PRIORITY</p><h2 id="enemy-picker-title">Who did the enemy pick?</h2><p>Your selection overrides automatic detection for this slot only.</p></div><button class="icon-button" type="button" data-close-enemy-picker aria-label="Close"><i data-lucide="x"></i></button></header>
+      <label class="picker-search"><i data-lucide="search"></i><input id="enemy-hero-search" type="search" placeholder="Search all heroes…" autocomplete="off"></label>
+      <div class="picker-grid" id="enemy-hero-grid"></div>
+      <footer><span><i data-lucide="scan-eye"></i> Other slots continue updating automatically.</span><button class="button subtle" id="clear-enemy-slot" type="button"><i data-lucide="eraser"></i> Clear this slot</button></footer>
+    </section>
   </div>
   <div class="toast" id="toast" role="status"></div>
   <script src="../../node_modules/lucide/dist/umd/lucide.js"></script>

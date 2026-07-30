@@ -7,6 +7,8 @@ import { DOTA_HEROES } from '../coaching/heroesData';
 export interface VisualDraftResult {
   radiant: number[];
   dire: number[];
+  radiantSlots: number[];
+  direSlots: number[];
   confidence: number;
   windowName: string;
   capturedAt: number;
@@ -104,15 +106,17 @@ export class VisualDraftDetector extends EventEmitter {
 
       const matches = this.pickSlots(source.thumbnail).map(slot => this.match(slot));
       const stable = matches.map((match, index) => this.stabilize(index, match));
-      const radiant = stable.slice(0, 5).filter(id => id > 0);
-      const dire = stable.slice(5).filter(id => id > 0);
+      const radiantSlots = stable.slice(0, 5);
+      const direSlots = stable.slice(5);
+      const radiant = radiantSlots.filter(id => id > 0);
+      const dire = direSlots.filter(id => id > 0);
       const accepted = matches.filter(match => match.heroId > 0 && match.score >= MIN_SCORE && match.margin >= MIN_MARGIN);
       const confidence = accepted.length ? accepted.reduce((sum, match) => sum + match.score, 0) / accepted.length : 0;
       const signature = `${radiant.join(',')}|${dire.join(',')}`;
       this.emit('status', { state: 'scanning', message: 'Reading the Dota draft automatically.', confidence });
       if (signature !== this.lastSignature && radiant.length + dire.length > 0) {
         this.lastSignature = signature;
-        const result: VisualDraftResult = { radiant, dire, confidence, windowName: source.name, capturedAt: Date.now() };
+        const result: VisualDraftResult = { radiant, dire, radiantSlots, direSlots, confidence, windowName: source.name, capturedAt: Date.now() };
         this.emit('draft', result);
       }
     } catch (error) {

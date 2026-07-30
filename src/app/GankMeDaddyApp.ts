@@ -32,6 +32,10 @@ export class GankMeDaddyApp extends EventEmitter {
   private pro: ProAnalyzer | null = null;
   private draft = new DraftAssistant();
   private lastDraftGameState: GameState | null = null;
+  private lastDraftSource: 'gsi' | 'vision' = 'vision';
+  private lastDraftConfidence: number | undefined;
+  private manualEnemySlots: Array<number | null> = Array(5).fill(null);
+  private draftRevision = 0;
   private lastSpokenDraftHero: number | null = null;
   private state: RuntimeState = {
     running: false,
@@ -85,11 +89,16 @@ export class GankMeDaddyApp extends EventEmitter {
         void this.handleDraftUpdate(state);
       });
       this.gsi.on('heroPicking', (state) => {
+        this.clearManualEnemyOverrides(false);
         this.setState({ inDraft: true, status: 'Hero selection — reading the draft' });
         void this.handleDraftUpdate(state);
       });
-      this.gsi.on('preGame', () => this.setState({ inDraft: false }));
+      this.gsi.on('preGame', () => {
+        this.clearManualEnemyOverrides(false);
+        this.setState({ inDraft: false });
+      });
       this.tracker.on('matchStart', (heroId: number) => {
+        this.clearManualEnemyOverrides(false);
         const profile = this.tracker?.getStratzContext()?.proProfile;
         coach.onMatchStart(heroId, profile?.isGuideMode || false, !!profile);
         this.setState({ inDraft: false });
@@ -106,6 +115,7 @@ export class GankMeDaddyApp extends EventEmitter {
         coach.onMatchEnd();
         this.lastDraftGameState = null;
         this.lastSpokenDraftHero = null;
+        this.clearManualEnemyOverrides(false);
         this.setState({ inMatch: false, heroId: null, heroName: null, status: 'Match complete — waiting for Dota 2' });
       });
 
@@ -148,6 +158,7 @@ export class GankMeDaddyApp extends EventEmitter {
     this.pro = null;
     this.lastDraftGameState = null;
     this.lastSpokenDraftHero = null;
+    this.clearManualEnemyOverrides(false);
     this.setState({
       running: false,
       gsiConnected: false,
@@ -210,10 +221,33 @@ export class GankMeDaddyApp extends EventEmitter {
     void this.handleDraftUpdate(state, 'vision', confidence);
   }
 
-  private async handleDraftUpdate(state: GameState, source: 'gsi' | 'vision' = 'gsi', confidence?: number): Promise<void> {
+  async setEnemyOverride(slot: number, heroId: number | null): Promise<DraftState> {
+    if (!Number.isInteger(slot) || slot < 0 || slot > 4) throw new Error('Enemy slot must be between 1 and 5.');
+    if (heroId !== null && !HERO_NAMES[heroId]) throw new Error('Unknown hero.');
+    if (heroId !== null) this.manualEnemySlots = this.manualEnemySlots.map(id => id === heroId ? null : id);
+    this.manualEnemySlots[slot] = heroId;
+    const state: GameState = this.lastDraftGameState || ({
+      map: { game_state: 'DOTA_GAMERULES_STATE_HERO_SELECTION' },
+      draft: { team2: {}, team3: {} },
+    } as GameState);
+    return this.handleDraftUpdate(state, this.lastDraftSource, this.lastDraftConfidence);
+  }
+
+  async clearManualEnemyOverrides(reanalyze = true): Promise<DraftState | null> {
+    this.manualEnemySlots = Array(5).fill(null);
+    this.draftRevision++;
+    if (!reanalyze || !this.lastDraftGameState) return null;
+    return this.handleDraftUpdate(this.lastDraftGameState, this.lastDraftSource, this.lastDraftConfidence);
+  }
+
+  private async handleDraftUpdate(state: GameState, source: 'gsi' | 'vision' = 'gsi', confidence?: number): Promise<DraftState> {
+    const revision = ++this.draftRevision;
     this.lastDraftGameState = state;
+    this.lastDraftSource = source;
+    this.lastDraftConfidence = confidence;
     const cfg = this.config.get();
-    const result: DraftState = await this.draft.analyze(state, cfg.position, cfg.enabledHeroIds, source);
+    const result: DraftState = await this.draft.analyze(state, cfg.position, cfg.enabledHeroIds, source, [...this.manualEnemySlots]);
+    if (revision !== this.draftRevision) return result;
     this.emit('draft', confidence === undefined ? result : { ...result, visionConfidence: confidence });
     if (result.source === 'gsi' || result.source === 'vision') {
       this.setState({ status: 'Live draft — recommendations updating' });
@@ -224,6 +258,7 @@ export class GankMeDaddyApp extends EventEmitter {
         this.voice?.speakNow(`Best ${voiceRole[cfg.position]} pick: ${best.heroName}. ${best.reasons[0] || ''}`);
       }
     }
+    return result;
   }
 
   private setHero(heroId: number, inMatch: boolean, status: string): void {
