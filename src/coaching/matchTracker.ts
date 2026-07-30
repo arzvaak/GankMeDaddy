@@ -232,6 +232,7 @@ export class MatchTracker extends EventEmitter {
       denies: state.player.denies || 0,
       gpm: state.player.gpm || 0,
       xpm: state.player.xpm || 0,
+      team: (state.player.team_name === 'radiant' || state.player.team_name === 'dire') ? state.player.team_name : 'radiant',
     };
 
     // Build hero snapshot

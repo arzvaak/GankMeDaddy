@@ -1,6 +1,6 @@
 # Coaching Engine & API Backend Codemap
 
-**Last Updated:** 2026-07-21
+**Last Updated:** 2026-07-30
 **Entry Points:**
 - [src/gsi/gsiServer.ts](file:///d:/GankMeDaddy/src/gsi/gsiServer.ts)
 - [src/coaching/coachingEngine.ts](file:///d:/GankMeDaddy/src/coaching/coachingEngine.ts)

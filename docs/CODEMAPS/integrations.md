@@ -1,6 +1,6 @@
 # External Integrations Codemap
 
-**Last Updated:** 2026-07-21
+**Last Updated:** 2026-07-30
 **Entry Points:**
 - [src/stratz/stratzClient.ts](file:///d:/GankMeDaddy/src/stratz/stratzClient.ts)
 - [src/voice/voiceOutput.ts](file:///d:/GankMeDaddy/src/voice/voiceOutput.ts)
