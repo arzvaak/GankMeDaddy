@@ -175,6 +175,7 @@ export interface PlayerSnapshot {
   denies: number;
   gpm: number;
   xpm: number;
+  team: 'radiant' | 'dire';
 }
 
 export interface HeroSnapshot {

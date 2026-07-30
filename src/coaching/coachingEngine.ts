@@ -189,38 +189,40 @@ export class CoachingEngine {
   // =========================================================================
   // General Role-Aware Rules
   // =========================================================================
-
   private generalRoleRules(snap: MatchSnapshot): CoachingRecommendation[] {
     const recs: CoachingRecommendation[] = [];
     const t = snap.clockTime;
     const role = snap.role;
     const isSupport = role === 'pos4' || role === 'pos5';
+    const isAlive = snap.hero.alive;
+    const healingInBase = this.isInBase(snap);
 
     // --- Rune reminders (role & lane specific) ---
     const nextRuneTime = this.getNextRuneTime(t);
-    if (nextRuneTime !== null) {
+    if (nextRuneTime !== null && isAlive) {
       const timeUntilRune = nextRuneTime - t;
       if (timeUntilRune > 0 && timeUntilRune <= 20 && nextRuneTime !== this.lastRumeReminder) {
         this.lastRumeReminder = nextRuneTime;
         const runeType = nextRuneTime < POWER_RUNE_START ? 'Water rune' : 'Power rune';
         const mins = Math.floor(nextRuneTime / 60);
         const secs = nextRuneTime % 60;
+        const timeStr = `${mins}:${secs.toString().padStart(2, '0')}`;
         
         let message = '';
         if (role === 'mid') {
           if (runeType === 'Water rune') {
-            message = `Water rune spawning at ${mins}:${secs.toString().padStart(2, '0')}. Push your creep wave under the enemy tower now to secure it.`;
+            message = `Water rune spawning at ${timeStr}. Consider pushing your creep wave under the enemy tower now so you can secure it to refill your bottle.`;
           } else {
-            message = `Power rune spawning at ${mins}:${secs.toString().padStart(2, '0')}. Push the lane and look to secure it or rotate with a good rune active.`;
+            message = `Power rune spawning at ${timeStr}. Try pushing the lane so you can contest it or rotate to make plays with a good active rune.`;
           }
         } else if (role === 'pos4') {
-          message = `${runeType} spawning at ${mins}:${secs.toString().padStart(2, '0')}. Roam to mid-lane to secure it for your mid or steal it from the enemy.`;
+          message = `${runeType} spawning at ${timeStr}. Consider roaming to mid-lane to help secure it, as a power rune control can dictate mid game momentum.`;
         } else if (role === 'pos5') {
-          message = `${runeType} spawning at ${mins}:${secs.toString().padStart(2, '0')}. Secure it if nearby, or secure bounty and wisdom runes for your carry.`;
+          message = `${runeType} spawning at ${timeStr}. Check nearby runes, or prioritize bounty and wisdom runes to help your team scale.`;
         } else if (role === 'pos3') {
-          message = `${runeType} spawning at ${mins}:${secs.toString().padStart(2, '0')}. Contest the enemy supports to starve the enemy carry of gold.`;
+          message = `${runeType} spawning at ${timeStr}. Try contesting the enemy supports to starve their carry of gold and map control.`;
         } else { // pos1
-          message = `Bounty and Wisdom runes spawning at ${mins}:${secs.toString().padStart(2, '0')}. Let your supports contest; focus on lane creep safety.`;
+          message = `Bounty and Wisdom runes spawning at ${timeStr}. Focus on securing safe lane farm while your supports contest.`;
         }
 
         recs.push({
@@ -235,19 +237,19 @@ export class CoachingEngine {
 
     // --- Lotus Pool reminder (role & lane specific) ---
     const nextLotusTime = this.getNextLotusTime(t);
-    if (nextLotusTime !== null) {
+    if (nextLotusTime !== null && isAlive) {
       const timeUntilLotus = nextLotusTime - t;
       if (timeUntilLotus > 0 && timeUntilLotus <= 20 && nextLotusTime !== this.lastLotusReminder) {
         this.lastLotusReminder = nextLotusTime;
         let message = '';
         if (role === 'pos1') {
-          message = 'Lotus pool respawning soon. Pick it up for critical lane health and mana sustain.';
+          message = 'Lotus pool is active. Try to secure it for critical lane health and mana sustain so you can stay in lane longer.';
         } else if (role === 'pos3') {
-          message = 'Lotus pool respawning soon. Contest it to deny the enemy safelaner healing.';
+          message = 'Lotus pool is active soon. Consider contesting it to deny the enemy safelaner healing resources.';
         } else if (role === 'pos4' || role === 'pos5') {
-          message = 'Lotus pool respawning. Secure the lotus fruit to replenish your lane core.';
+          message = 'Lotus pool is active soon. Try to secure the lotus fruit to replenish your lane core\'s resources.';
         } else { // mid
-          message = 'Lotus pool is active in side lanes. Grab a lotus if rotating to replenish mana.';
+          message = 'Lotus pool is active in side lanes. Consider grabbing a lotus if rotating to replenish your mana pool.';
         }
 
         recs.push({
@@ -267,7 +269,7 @@ export class CoachingEngine {
         recs.push({
           priority: 'low',
           category: 'timing',
-          message: 'Daytime. Better vision. Look for opportunities.',
+          message: 'Daytime is here. Vision is expanded. Look to set up aggressive plays or establish map control.',
           cooldownKey: 'daynight',
           cooldownSeconds: 120,
         });
@@ -275,7 +277,7 @@ export class CoachingEngine {
         recs.push({
           priority: 'medium',
           category: 'timing',
-          message: 'Nighttime. Reduced vision. Stay safe.',
+          message: 'Nighttime is here. Vision is reduced. Play more cautiously as gank risks are higher.',
           cooldownKey: 'daynight',
           cooldownSeconds: 120,
         });
@@ -289,19 +291,19 @@ export class CoachingEngine {
         let message = '';
         switch (role) {
           case 'pos1':
-            message = '10 minutes. Laning wrapping up. Transition to jungle and triangle farm. Protect your life and reach core item timings.';
+            message = '10 minutes. Laning is wrapping up. Consider transitioning to the jungle or triangle farm to scale safely and avoid ganks.';
             break;
           case 'mid':
-            message = '10 minutes. Laning over. Active playmaking starts. Grab a smoke, rotate to side lanes, and pressure enemy towers.';
+            message = '10 minutes. Laning is wrapping up. Active playmaking starts: grab a smoke, rotate to side lanes, and pressure enemy towers to create space.';
             break;
           case 'pos3':
-            message = '10 minutes. Laning phase ending. Push the enemy safelane tower, take control of their jungle, and prepare to initiate.';
+            message = '10 minutes. Laning phase is ending. Consider pushing the enemy safelane tower to take control of their jungle and create space.';
             break;
           case 'pos4':
-            message = '10 minutes. Laning wrapping up. Coordinate smoke ganks with mid or offlane, and set up offensive jungle vision.';
+            message = '10 minutes. Laning is wrapping up. Look to coordinate smoke ganks with mid or offlane and set up offensive vision.';
             break;
           case 'pos5':
-            message = '10 minutes. Laning phase over. Stack the jungle camps, ward choke points, and stay close to your carry for backup.';
+            message = '10 minutes. Laning is wrapping up. Stack jungle camps and ward choke points to protect your carry as they transition to farm.';
             break;
         }
         recs.push({
@@ -315,19 +317,19 @@ export class CoachingEngine {
         let message = '';
         switch (role) {
           case 'pos1':
-            message = '25 minutes. Late game. You are the main damage dealer. Do not get caught without buyback, and group for Roshan.';
+            message = '25 minutes. Late game transition. Avoid getting caught without buyback, and coordinate with your team around Roshan to secure the Aegis.';
             break;
           case 'mid':
-            message = '25 minutes. Late game. Fight target prioritization is key. Look to jump the backline supports and squishy cores.';
+            message = '25 minutes. Late game transition. Target prioritization is key. Look to jump the backline supports and squishy cores in fights.';
             break;
           case 'pos3':
-            message = '25 minutes. Late game. Be the frontline shield. Look for a Blink initiation on priority targets to start teamfights.';
+            message = '25 minutes. Late game transition. Position as the frontline shield and look for initiation windows on priority targets.';
             break;
           case 'pos4':
-            message = '25 minutes. Late game. Stay hidden in trees to execute counter-initiations, and maintain vision around objectives.';
+            message = '25 minutes. Late game transition. Stay hidden to execute counter-initiations and maintain vision around key objectives.';
             break;
           case 'pos5':
-            message = '25 minutes. Late game. Stay positioned behind your cores, prioritize using defensive saves, and keep buyback ready.';
+            message = '25 minutes. Late game transition. Stay positioned behind your cores to execute defensive saves and keep buyback ready.';
             break;
         }
         recs.push({
@@ -349,19 +351,19 @@ export class CoachingEngine {
         let message = '';
         switch (role) {
           case 'pos1':
-            message = `You died at ${mins} minutes. This is slowing your farming timings. Play defensively near tower and ask supports to stack.`;
+            message = `You died at ${mins} minutes, which slows your item timings. Consider playing defensively near your tower and ask supports to stack.`;
             break;
           case 'mid':
-            message = `You died at ${mins} minutes. You are feeding the enemy mid momentum. Control aggression and watch your highground positioning.`;
+            message = `You died at ${mins} minutes, giving the enemy mid momentum. Control creep aggression and watch your highground positioning.`;
             break;
           case 'pos3':
-            message = `You died at ${mins} minutes. Don't let the enemy carry free farm. Focus on pulling the wave or holding it near your tower.`;
+            message = `You died at ${mins} minutes. Try pulling the wave or holding it near your tower to avoid giving the enemy carry free farm.`;
             break;
           case 'pos4':
-            message = `You died at ${mins} minutes. Avoid dying for free in offlane. Ensure your presence creates space or trades for enemy carry HP.`;
+            message = `You died at ${mins} minutes. Focus on trading efficiently from trees to make space rather than risking your life.`;
             break;
           case 'pos5':
-            message = `You died at ${mins} minutes. Watch your positioning in safelane. Trade from trees, keep your carry safe, and avoid feeding.`;
+            message = `You died at ${mins} minutes. Watch your positioning in lane; trade from safety to preserve your carry's presence.`;
             break;
         }
         recs.push({
@@ -375,19 +377,19 @@ export class CoachingEngine {
         let message = '';
         switch (role) {
           case 'pos1':
-            message = `${this.deathCount} deaths. Stop fighting. Stay off the map, farm safely in the triangle, and do not show yourself alone.`;
+            message = `${this.deathCount} deaths. Focus on staying off the map, farming the safe triangle, and dodging fights until you recover.`;
             break;
           case 'mid':
-            message = `${this.deathCount} deaths. You need to play defensively. Avoid solo rotations. Stick behind your offlane initiator.`;
+            message = `${this.deathCount} deaths. Stick behind your offlane initiator and avoid solo plays until you stabilize.`;
             break;
           case 'pos3':
-            message = `${this.deathCount} deaths. Stop feeding. Shift to aura items, stay with your team, and play for counter-initiations.`;
+            message = `${this.deathCount} deaths. Shift toward aura items and play for team counter-initiations rather than deep plays.`;
             break;
           case 'pos4':
-            message = `${this.deathCount} deaths. Play safer behind trees. Do not walk into un-warded enemy territory alone.`;
+            message = `${this.deathCount} deaths. Stick to warding safe entry points and play defensively behind trees.`;
             break;
           case 'pos5':
-            message = `${this.deathCount} deaths. Stop feeding. Play far back, buy defensive saves, and only die to secure your carry's life.`;
+            message = `${this.deathCount} deaths. Prioritize defensive saves and stay positioned behind your cores to avoid feeding.`;
             break;
         }
         recs.push({
@@ -401,21 +403,21 @@ export class CoachingEngine {
     }
 
     // --- Low HP warning (role specific) ---
-    if (snap.hero.alive && snap.hero.healthPercent > 0 && snap.hero.healthPercent < LOW_HP_THRESHOLD) {
+    if (isAlive && !healingInBase && snap.hero.healthPercent > 0 && snap.hero.healthPercent < LOW_HP_THRESHOLD) {
       let message = '';
       switch (role) {
         case 'pos1':
-          message = 'Low health. Back off immediately to tower, use a salve or retreat to jungle. Do not risk giving away kill bounty.';
+          message = 'Low health. Consider backing off to your tower, using a salve, or retreating to the jungle to avoid giving away kill bounty.';
           break;
         case 'mid':
-          message = 'Low health. Back off, bottle a rune, or base. You cannot contest mid lane with low HP.';
+          message = 'Low health. Consider backing off to bottle a rune or returning to base, as contesting the mid lane with low HP is high risk.';
           break;
         case 'pos3':
-          message = 'Low health. Retreat to tower or use regen. You must stay healthy to pressure the lane.';
+          message = 'Low health. Retreat to tower or use regen. You need to stay healthy to maintain lane pressure.';
           break;
         case 'pos4':
         case 'pos5':
-          message = 'Low health. Keep your distance, stay in the backlines, and heal up. Your life is needed to save cores.';
+          message = 'Low health. Keep your distance, stay in the backlines, and heal up to support your cores.';
           break;
       }
       recs.push({
@@ -428,21 +430,21 @@ export class CoachingEngine {
     }
 
     // --- Low mana warning (role specific) ---
-    if (snap.hero.alive && snap.hero.manaPercent > 0 && snap.hero.manaPercent < LOW_MANA_THRESHOLD && snap.hero.level >= LOW_MANA_MIN_LEVEL) {
+    if (isAlive && !healingInBase && snap.hero.manaPercent > 0 && snap.hero.manaPercent < LOW_MANA_THRESHOLD && snap.hero.level >= LOW_MANA_MIN_LEVEL) {
       let message = '';
       switch (role) {
         case 'pos1':
-          message = 'Low mana. Use a clarity or shrine. You need mana for farming spells or escape abilities.';
+          message = 'Low mana. Use a clarity or shrine so you have enough mana for farming spells or escape abilities.';
           break;
         case 'mid':
-          message = 'Low mana. Use bottle, clarity, or grab a rune. You need mana to threaten the lane and secure CS.';
+          message = 'Low mana. Bottle a rune or ferry a clarity, as you need mana to threaten the lane and secure creeps.';
           break;
         case 'pos3':
-          message = 'Low mana. Ferry a clarity. You need mana to cast your stun or crowd control spells.';
+          message = 'Low mana. Ferry a clarity so you have mana to cast your stun or crowd control abilities.';
           break;
         case 'pos4':
         case 'pos5':
-          message = 'Low mana. Use clarity or shrine. Your spells are critical to peel or secure kills in skirmishes.';
+          message = 'Low mana. Use a clarity or shrine. Your spells are critical to peel for your core or secure kills.';
           break;
       }
       recs.push({
@@ -461,11 +463,11 @@ export class CoachingEngine {
       if (mins >= LH_BENCHMARK_MIN_MINUTES && lhPerMin < LH_PER_MIN_TARGET) {
         let message = '';
         if (role === 'pos1') {
-          message = `Your last hits are low for a Carry. Only ${snap.player.lastHits} in ${Math.floor(mins)} minutes. Focus on creep lane control.`;
+          message = `Your last hits are low for a Carry: ${snap.player.lastHits} in ${Math.floor(mins)} minutes. Consider playing closer to your tower and requesting support pulls to farm safely.`;
         } else if (role === 'mid') {
-          message = `Your last hits are low for Mid. ${snap.player.lastHits} in ${Math.floor(mins)} minutes. Focus on securing creeps and denies.`;
+          message = `Your last hits are low for Mid: ${snap.player.lastHits} in ${Math.floor(mins)} minutes. Try focusing on creep equilibrium and secure denies to recover.`;
         } else { // pos3
-          message = `Your last hits are low. ${snap.player.lastHits} in ${Math.floor(mins)} minutes. Secure the lane and pull hard camp if needed.`;
+          message = `Your last hits are low: ${snap.player.lastHits} in ${Math.floor(mins)} minutes. Try securing the wave or pulling the hard camp to reset the lane.`;
         }
         recs.push({
           priority: 'medium',
@@ -477,15 +479,23 @@ export class CoachingEngine {
       }
     }
 
+    const playerTeam = snap.player.team || 'radiant';
     const midTowers = snap.buildings.filter(b =>
       b.name.includes('mid') && b.name.includes('tower') &&
       b.health > 0 && b.health < b.maxHealth * TOWER_LOW_HEALTH_RATIO
     );
     for (const tower of midTowers) {
+      const isFriendly = tower.team === playerTeam;
+      let message = '';
+      if (isFriendly) {
+        message = `Your mid tower is low. ${isSupport ? 'Consider defending it or placing defensive wards nearby to secure your map area.' : 'Try to defend it to maintain mid lane control.'}`;
+      } else {
+        message = `The enemy mid tower is low. ${isSupport ? 'Consider warding their jungle to secure map pressure around it.' : 'Try to pressure and push it down to open up the map.'}`;
+      }
       recs.push({
         priority: 'high',
         category: 'positioning',
-        message: `${tower.team} mid tower is low. ${isSupport ? 'Help defend or ward near it.' : tower.team === 'radiant' ? 'Defend it.' : 'Push it down.'}`,
+        message,
         cooldownKey: `tower_${tower.name}`,
         cooldownSeconds: 60,
       });
@@ -631,7 +641,7 @@ export class CoachingEngine {
         recs.push({
           priority: 'medium',
           category: 'item',
-          message: `Pro players usually have ${timing.itemName} by ${proMins}:${proSecs.toString().padStart(2, '0')}. You're behind on this timing. Focus on farming for it.`,
+          message: `Pro players usually secure ${timing.itemName} by ${proMins}:${proSecs.toString().padStart(2, '0')} to enable their next power spike. Consider prioritizing safe farm and avoiding high-risk fights to finish it.`,
           cooldownKey: adviceKey,
           cooldownSeconds: 180,
         });
@@ -645,7 +655,7 @@ export class CoachingEngine {
         recs.push({
           priority: 'high',
           category: 'item',
-          message: `Item timing window: pro players get ${timing.itemName} around now. Make sure you're on track.`,
+          message: `Pro players typically acquire ${timing.itemName} around this time. Getting this will expand your map pressure and combat capability.`,
           cooldownKey: adviceKey,
           cooldownSeconds: 180,
         });
@@ -659,7 +669,7 @@ export class CoachingEngine {
         recs.push({
           priority: 'medium',
           category: 'farming',
-          message: `Your GPM is ${snap.player.gpm}. Pro players average ${Math.round(profile.avgGPM)} on this hero. Farm more aggressively.`,
+          message: `Your GPM is ${snap.player.gpm}, compared to the pro average of ${Math.round(profile.avgGPM)}. Consider clearing jungle camps between waves to speed up your progression.`,
           cooldownKey: 'gpm_compare',
           cooldownSeconds: 180,
         });
@@ -667,7 +677,7 @@ export class CoachingEngine {
         recs.push({
           priority: 'low',
           category: 'farming',
-          message: `Great farm. Your GPM is above pro average. Use your advantage to make plays.`,
+          message: `Excellent GPM of ${snap.player.gpm}, exceeding the pro average of ${Math.round(profile.avgGPM)}. Try to leverage this gold advantage to secure objectives and press map control.`,
           cooldownKey: 'gpm_ahead',
           cooldownSeconds: 300,
         });
@@ -697,19 +707,19 @@ export class CoachingEngine {
           if (diff >= 10) {
             recs.push({
               priority: 'low', category: 'farming',
-              message: `${mins} minute mark: ${playerLH} last hits. You're ahead of pro pace. Great farming.`,
+              message: `${mins} minute mark: ${playerLH} last hits, which is ahead of the pro benchmark of ${proEstLH}. Excellent job maximizing farm.`,
               cooldownKey: `lh_cp_${cp}`, cooldownSeconds: 300,
             });
           } else if (diff >= -10) {
             recs.push({
               priority: 'medium', category: 'farming',
-              message: `${mins} minute mark: ${playerLH} last hits. On par with pro average pace. Keep it up.`,
+              message: `${mins} minute mark: ${playerLH} last hits, matching the pro benchmark of ${proEstLH}. Keep maintaining this pace.`,
               cooldownKey: `lh_cp_${cp}`, cooldownSeconds: 300,
             });
           } else {
             recs.push({
               priority: 'high', category: 'farming',
-              message: `${mins} minute mark: ${playerLH} last hits. Pro players average around ${proEstLH} by now. You need to farm faster.`,
+              message: `${mins} minute mark: ${playerLH} last hits, which is behind the pro average of ${proEstLH}. Consider clearing jungle stacks or lane waves to pick up the speed.`,
               cooldownKey: `lh_cp_${cp}`, cooldownSeconds: 300,
             });
           }
@@ -750,5 +760,16 @@ export class CoachingEngine {
       if (t > currentTime) return t;
     }
     return null;
+  }
+
+  private isInBase(snap: MatchSnapshot): boolean {
+    const x = snap.hero.xpos;
+    const y = snap.hero.ypos;
+    const team = snap.player.team || 'radiant';
+    if (team === 'radiant') {
+      return x < -5500 && y < -5500;
+    } else {
+      return x > 5500 && y > 5500;
+    }
   }
 }
