@@ -1,7 +1,7 @@
 {
   "name": "gankmedaddy",
   "version": "1.0.0",
-  "description": "Dota 2 Live Mid Coaching Agent — Topson-style mid lane coach with voice output",
+  "description": "Dota 2 Live Position-Aware Coaching Agent with voice output",
   "main": "dist/index.js",
   "scripts": {
     "build": "tsc",

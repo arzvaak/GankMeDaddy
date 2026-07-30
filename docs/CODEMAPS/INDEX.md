@@ -3,7 +3,7 @@
 **Last Updated:** 2026-07-21
 **Entry Point:** [src/index.ts](file:///d:/GankMeDaddy/src/index.ts)
 
-GankMeDaddy is a live, data-driven Dota 2 coaching assistant supporting all five positions (mid, pos1, pos3, pos4, pos5). It integrates real-time game telemetry, historical professional data, and text-to-speech audio outputs to provide context-aware, voice-coached gameplay tips.
+GankMeDaddy is a live, data-driven Dota 2 coaching assistant supporting all five positions (pos1, mid, pos3, pos4, pos5). It integrates real-time game telemetry, historical professional data, and text-to-speech audio outputs to provide context-aware, voice-coached gameplay tips.
 
 ## System Architecture
 

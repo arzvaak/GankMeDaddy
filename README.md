@@ -14,7 +14,7 @@ A lightweight Windows 11 system tray application that provides **real-time voice
 - **Rune/Lotus/Shrine timers** with voice reminders.
 - **Creep score checkpoints** at 10/20/30 min vs pro player pace.
 - **Priority-based TTS queue** with interrupt protection and cooldown deduplication.
-- **Lightweight System Tray** — Position selector (mid/pos1/pos3/pos4/pos5), voice toggle, volume +/- controls, setup GSI, or close the application.
+- **Lightweight System Tray** — Position selector (pos1/mid/pos3/pos4/pos5), voice toggle, volume +/- controls, setup GSI, or close the application.
 
 ## Supported Heroes
 
