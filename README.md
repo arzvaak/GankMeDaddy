@@ -5,7 +5,7 @@ A lightweight Windows 11 system tray application that provides **real-time voice
 ## Features
 
 - **Position & Lane-Specific Voice Coaching** — Real-time recommendations (runes, lotus pools, phase transitions, deaths, and HP/mana alerts) adapt dynamically to the player's active role and lane.
-- **Role-Aware Professional Benchmarks** — Dynamically fetches and analyzes pro match history on STRATZ from top players representing each position (Pos 1 Carry: Yatoro, Pos 2 Mid: Topson, Pos 3 Offlane: Collapse, Pos 4 Soft Support: XinQ, Pos 5 Hard Support: Miposhka).
+- **Role-Aware Professional Benchmarks** — Dynamically fetches and analyzes pro match history on STRATZ from top players representing each position.
 - **Real-time voice coaching** via offline high-quality neural Piper TTS with standard OneCore Speech fallback. Volume adjustable (0-100) from the tray.
 - **Dota 2 Game State Integration** for live game telemetry (HP, mana, gold, items, abilities), locked down locally to `127.0.0.1`.
 - **32 heroes** across all 5 positions with dedicated, robust strategy modules.
