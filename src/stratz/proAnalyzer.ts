@@ -10,6 +10,9 @@ import {
   ProItemTiming,
   HERO_NAMES,
   SUPPORTED_HERO_IDS,
+  Role,
+  ROLE_PRO_PLAYERS,
+  HERO_ROLES,
 } from '../coaching/types';
 
 const PRO_STEAM_ID = 94054712;
@@ -19,35 +22,37 @@ const PRO_STEAM_ID = 94054712;
  */
 export class ProAnalyzer {
   private stratz: StratzClient;
-  private profileCache: Map<number, ProHeroProfile> = new Map();
+  private profileCache: Map<string, ProHeroProfile> = new Map();
 
   constructor(stratz: StratzClient) {
     this.stratz = stratz;
   }
 
   /**
-   * Fetch and analyze pro matches for a specific hero.
+   * Fetch and analyze pro matches for a specific hero and role.
    * Caches the result for the session.
    */
-  async analyzeHero(heroId: number, take: number = 25): Promise<ProHeroProfile | null> {
-    if (this.profileCache.has(heroId)) {
-      return this.profileCache.get(heroId)!;
+  async analyzeHero(heroId: number, role: Role = 'mid', take: number = 25): Promise<ProHeroProfile | null> {
+    const cacheKey = `${heroId}_${role}`;
+    if (this.profileCache.has(cacheKey)) {
+      return this.profileCache.get(cacheKey)!;
     }
 
+    const proSteamId = ROLE_PRO_PLAYERS[role] || PRO_STEAM_ID;
     const heroName = HERO_NAMES[heroId] || `Hero ${heroId}`;
-    console.log(`[PRO] Fetching ${heroName} match data from STRATZ...`);
+    console.log(`[PRO] Fetching ${heroName} (${role}) match data from STRATZ...`);
 
     try {
-      let matches = await this.stratz.fetchProMatches([heroId], 15);
+      let matches = await this.stratz.fetchProMatches(proSteamId, [heroId], 15);
 
       const proPlayedMatches = (matches || []).filter((m: any) =>
-        m.players?.some((p: any) => p.steamAccountId === PRO_STEAM_ID)
+        m.players?.some((p: any) => p.steamAccountId === proSteamId)
       );
 
       let isGuideMode = false;
 
       if (proPlayedMatches.length < 3) {
-        console.log(`[PRO] < 3 pro matches on ${heroName} (${proPlayedMatches.length} found). Fetching STRATZ Pro Guides instead...`);
+        console.log(`[PRO] < 3 pro matches on ${heroName} for ${role} (${proPlayedMatches.length} found). Fetching STRATZ Pro Guides instead...`);
         const guides = await this.stratz.fetchHeroGuides(heroId, 5);
 
         if (!guides || guides.length === 0) {
@@ -79,9 +84,9 @@ export class ProAnalyzer {
         isGuideMode = true;
       }
 
-      const profile = this.buildProfile(heroId, heroName, matches);
+      const profile = this.buildProfile(heroId, heroName, matches, proSteamId);
       profile.isGuideMode = isGuideMode;
-      this.profileCache.set(heroId, profile);
+      this.profileCache.set(cacheKey, profile);
 
       const modeStr = isGuideMode ? 'Pro Guides' : 'Pro matches';
       console.log(`[PRO] Analyzed ${profile.matchesAnalyzed} matches for ${heroName} (${modeStr})`);
@@ -115,7 +120,8 @@ export class ProAnalyzer {
     console.log(`[PRO] Pre-loading data for ${ids.length} heroes...`);
 
     for (const heroId of ids) {
-      await this.analyzeHero(heroId);
+      const role = HERO_ROLES[heroId] || 'mid';
+      await this.analyzeHero(heroId, role);
       await new Promise(resolve => setTimeout(resolve, 500));
     }
 
@@ -123,17 +129,17 @@ export class ProAnalyzer {
   }
 
   /**
-   * Get cached profile for a hero.
+   * Get cached profile for a hero and role.
    */
-  getProfile(heroId: number): ProHeroProfile | null {
-    return this.profileCache.get(heroId) || null;
+  getProfile(heroId: number, role: Role = 'mid'): ProHeroProfile | null {
+    return this.profileCache.get(`${heroId}_${role}`) || null;
   }
 
   // -------------------------------------------------------------------------
   // Private analysis methods
   // -------------------------------------------------------------------------
 
-  private buildProfile(heroId: number, heroName: string, matches: any[]): ProHeroProfile {
+  private buildProfile(heroId: number, heroName: string, matches: any[], proSteamId: number): ProHeroProfile {
     let totalKills = 0, totalDeaths = 0, totalAssists = 0;
     let totalGPM = 0, totalXPM = 0, totalDuration = 0;
     let wins = 0;
@@ -142,7 +148,7 @@ export class ProAnalyzer {
     const validMatches: any[] = [];
 
     for (const match of matches) {
-      const targetSteamId = match.guideSteamAccountId || PRO_STEAM_ID;
+      const targetSteamId = match.guideSteamAccountId || proSteamId;
       const player = match.players?.find(
         (p: any) => p.steamAccountId === targetSteamId
       );
@@ -164,7 +170,7 @@ export class ProAnalyzer {
     const n = totalMatchesWithPlayer || 1;
 
     const victoryMatches = validMatches.filter(m => {
-      const targetSteamId = m.guideSteamAccountId || PRO_STEAM_ID;
+      const targetSteamId = m.guideSteamAccountId || proSteamId;
       const p = m.players?.find((pl: any) => pl.steamAccountId === targetSteamId);
       return p && p.isVictory;
     });
@@ -175,7 +181,7 @@ export class ProAnalyzer {
     const startingItemCounts: Map<number, number> = new Map();
 
     for (const match of itemAnalysisMatches) {
-      const targetSteamId = match.guideSteamAccountId || PRO_STEAM_ID;
+      const targetSteamId = match.guideSteamAccountId || proSteamId;
       const player = match.players?.find(
         (p: any) => p.steamAccountId === targetSteamId
       );

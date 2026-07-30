@@ -14,11 +14,12 @@ This codemap covers external communication layers: the STRATZ GraphQL client (pr
 GankMeDaddy queries the STRATZ API to compile statistical baselines for pro gameplay.
 
 ### Architecture
-- **GraphQL Client** ([src/stratz/stratzClient.ts](file:///d:/GankMeDaddy/src/stratz/stratzClient.ts)): Runs raw GraphQL queries using standard fetch.
-- **Pro Analyzer** ([src/stratz/proAnalyzer.ts](file:///d:/GankMeDaddy/src/stratz/proAnalyzer.ts)): Iterates through historical match profiles to compute:
+- **GraphQL Client** ([src/stratz/stratzClient.ts](file:///d:/GankMeDaddy/src/stratz/stratzClient.ts)): Runs raw GraphQL queries using standard fetch, dynamically targeting specific professional player accounts.
+- **Pro Analyzer** ([src/stratz/proAnalyzer.ts](file:///d:/GankMeDaddy/src/stratz/proAnalyzer.ts)): Iterates through historical match profiles for role-specific representative professional players to compute:
   - Median timings for all primary items.
   - Average GPM and XP/Min for the targeted hero.
   - Creep score multipliers.
+  - **Role-Aware Benchmarking**: Uses a targeted mapping of professional players for each role to compile custom benchmarks based on the active role, falling back to STRATZ Pro Guides matches if needed. It caches compiled profiles under `${heroId}_${role}` keys.
 
 ---
 

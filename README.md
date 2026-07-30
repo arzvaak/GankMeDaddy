@@ -1,11 +1,12 @@
 # GankMeDaddy — Dota 2 Live Coaching Agent
 
-A lightweight Windows 11 system tray application that provides **real-time voice coaching** for all five positions, using **pro player match data** and STRATZ pro guides as benchmarks.
+A lightweight Windows 11 system tray application that provides **real-time voice coaching** for all five positions, using **role-aware pro player match data** and STRATZ pro guides as benchmarks.
 
 ## Features
 
+- **Position & Lane-Specific Voice Coaching** — Real-time recommendations (runes, lotus pools, phase transitions, deaths, and HP/mana alerts) adapt dynamically to the player's active role and lane.
+- **Role-Aware Professional Benchmarks** — Dynamically fetches and analyzes pro match history on STRATZ from top players representing each position (Pos 1 Carry: Yatoro, Pos 2 Mid: Topson, Pos 3 Offlane: Collapse, Pos 4 Soft Support: XinQ, Pos 5 Hard Support: Miposhka).
 - **Real-time voice coaching** via offline high-quality neural Piper TTS with standard OneCore Speech fallback. Volume adjustable (0-100) from the tray.
-- **Data-driven benchmarks** from pro player STRATZ match history and STRATZ pro guides (item timings, GPM, KDA).
 - **Dota 2 Game State Integration** for live game telemetry (HP, mana, gold, items, abilities), locked down locally to `127.0.0.1`.
 - **32 heroes** across all 5 positions with dedicated, robust strategy modules.
 - **Dynamic Build-Path Branching** — Automatically detects physical/magical item trajectories and filters advice dynamically.
@@ -116,7 +117,7 @@ Dota 2 Client (GSI) ───► GSIServer (Port 3001, localhost)
 
 1. **Dota 2 GSI** sends real-time game state to `127.0.0.1:3001` every 0.5s.
 2. **Match Tracker** converts GSI data into normalized snapshots.
-3. **STRATZ Pro Analyzer** provides real item timing benchmarks from pro matches or fallback pro guides.
+3. **STRATZ Pro Analyzer** provides position-specific benchmarks from representative professional players or falls back to STRATZ Pro Guides.
 4. **Coaching Engine** evaluates general, build-path, counter, and hero-specific rules.
 5. **Voice Output** plays speech via Windows SAPI or neural Piper TTS with queue deduplication.
 

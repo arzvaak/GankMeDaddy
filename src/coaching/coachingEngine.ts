@@ -193,9 +193,10 @@ export class CoachingEngine {
   private generalRoleRules(snap: MatchSnapshot): CoachingRecommendation[] {
     const recs: CoachingRecommendation[] = [];
     const t = snap.clockTime;
-    const isSupport = snap.role === 'pos4' || snap.role === 'pos5';
+    const role = snap.role;
+    const isSupport = role === 'pos4' || role === 'pos5';
 
-    // --- Rune reminders (all roles) ---
+    // --- Rune reminders (role & lane specific) ---
     const nextRuneTime = this.getNextRuneTime(t);
     if (nextRuneTime !== null) {
       const timeUntilRune = nextRuneTime - t;
@@ -204,26 +205,55 @@ export class CoachingEngine {
         const runeType = nextRuneTime < POWER_RUNE_START ? 'Water rune' : 'Power rune';
         const mins = Math.floor(nextRuneTime / 60);
         const secs = nextRuneTime % 60;
+        
+        let message = '';
+        if (role === 'mid') {
+          if (runeType === 'Water rune') {
+            message = `Water rune spawning at ${mins}:${secs.toString().padStart(2, '0')}. Push your creep wave under the enemy tower now to secure it.`;
+          } else {
+            message = `Power rune spawning at ${mins}:${secs.toString().padStart(2, '0')}. Push the lane and look to secure it or rotate with a good rune active.`;
+          }
+        } else if (role === 'pos4') {
+          message = `${runeType} spawning at ${mins}:${secs.toString().padStart(2, '0')}. Roam to mid-lane to secure it for your mid or steal it from the enemy.`;
+        } else if (role === 'pos5') {
+          message = `${runeType} spawning at ${mins}:${secs.toString().padStart(2, '0')}. Secure it if nearby, or secure bounty and wisdom runes for your carry.`;
+        } else if (role === 'pos3') {
+          message = `${runeType} spawning at ${mins}:${secs.toString().padStart(2, '0')}. Contest the enemy supports to starve the enemy carry of gold.`;
+        } else { // pos1
+          message = `Bounty and Wisdom runes spawning at ${mins}:${secs.toString().padStart(2, '0')}. Let your supports contest; focus on lane creep safety.`;
+        }
+
         recs.push({
           priority: 'high',
           category: 'rune',
-          message: `${runeType} spawning at ${mins}:${secs.toString().padStart(2, '0')}. ${isSupport ? 'Secure it for your mid' : 'Move to rune now'}.`,
+          message,
           cooldownKey: `rune_${nextRuneTime}`,
           cooldownSeconds: 60,
         });
       }
     }
 
-    // --- Lotus Pool reminder ---
+    // --- Lotus Pool reminder (role & lane specific) ---
     const nextLotusTime = this.getNextLotusTime(t);
     if (nextLotusTime !== null) {
       const timeUntilLotus = nextLotusTime - t;
       if (timeUntilLotus > 0 && timeUntilLotus <= 20 && nextLotusTime !== this.lastLotusReminder) {
         this.lastLotusReminder = nextLotusTime;
+        let message = '';
+        if (role === 'pos1') {
+          message = 'Lotus pool respawning soon. Pick it up for critical lane health and mana sustain.';
+        } else if (role === 'pos3') {
+          message = 'Lotus pool respawning soon. Contest it to deny the enemy safelaner healing.';
+        } else if (role === 'pos4' || role === 'pos5') {
+          message = 'Lotus pool respawning. Secure the lotus fruit to replenish your lane core.';
+        } else { // mid
+          message = 'Lotus pool is active in side lanes. Grab a lotus if rotating to replenish mana.';
+        }
+
         recs.push({
           priority: 'medium',
           category: 'lotus',
-          message: `Lotus Pool respawning soon. Pick it up for mana.`,
+          message,
           cooldownKey: `lotus_${nextLotusTime}`,
           cooldownSeconds: 120,
         });
@@ -253,25 +283,57 @@ export class CoachingEngine {
     }
     if (this.lastDaytime === null) this.lastDaytime = snap.isDaytime;
 
-    // --- Phase transitions (role-aware) ---
+    // --- Phase transitions (role & lane specific) ---
     if (snap.phase !== this.lastPhase && this.lastPhase !== '') {
       if (snap.phase === 'midgame') {
+        let message = '';
+        switch (role) {
+          case 'pos1':
+            message = '10 minutes. Laning wrapping up. Transition to jungle and triangle farm. Protect your life and reach core item timings.';
+            break;
+          case 'mid':
+            message = '10 minutes. Laning over. Active playmaking starts. Grab a smoke, rotate to side lanes, and pressure enemy towers.';
+            break;
+          case 'pos3':
+            message = '10 minutes. Laning phase ending. Push the enemy safelane tower, take control of their jungle, and prepare to initiate.';
+            break;
+          case 'pos4':
+            message = '10 minutes. Laning wrapping up. Coordinate smoke ganks with mid or offlane, and set up offensive jungle vision.';
+            break;
+          case 'pos5':
+            message = '10 minutes. Laning phase over. Stack the jungle camps, ward choke points, and stay close to your carry for backup.';
+            break;
+        }
         recs.push({
           priority: 'high',
           category: 'rotation',
-          message: isSupport
-            ? '10 minutes. Laning phase over. Stack camps, place deep wards, and look for smoke ganks.'
-            : '10 minutes. Laning phase is over. Start looking for rotations and objectives.',
+          message,
           cooldownKey: 'phase_midgame',
           cooldownSeconds: 300,
         });
       } else if (snap.phase === 'lategame') {
+        let message = '';
+        switch (role) {
+          case 'pos1':
+            message = '25 minutes. Late game. You are the main damage dealer. Do not get caught without buyback, and group for Roshan.';
+            break;
+          case 'mid':
+            message = '25 minutes. Late game. Fight target prioritization is key. Look to jump the backline supports and squishy cores.';
+            break;
+          case 'pos3':
+            message = '25 minutes. Late game. Be the frontline shield. Look for a Blink initiation on priority targets to start teamfights.';
+            break;
+          case 'pos4':
+            message = '25 minutes. Late game. Stay hidden in trees to execute counter-initiations, and maintain vision around objectives.';
+            break;
+          case 'pos5':
+            message = '25 minutes. Late game. Stay positioned behind your cores, prioritize using defensive saves, and keep buyback ready.';
+            break;
+        }
         recs.push({
           priority: 'high',
           category: 'rotation',
-          message: isSupport
-            ? '25 minutes. Late game. Stick with your cores, save your spells for fights, and maintain vision.'
-            : '25 minutes. Late game. Group with your team for key fights. Watch your positioning.',
+          message,
           cooldownKey: 'phase_lategame',
           cooldownSeconds: 300,
         });
@@ -279,60 +341,136 @@ export class CoachingEngine {
     }
     this.lastPhase = snap.phase;
 
-    // --- Death tracking (role-aware) ---
+    // --- Death tracking (role & lane specific) ---
     if (snap.player.deaths > this.deathCount) {
       this.deathCount = snap.player.deaths;
       const mins = Math.floor(t / 60);
       if (this.deathCount <= LANING_DEATH_THRESHOLD && mins < LANING_DEATH_MIN_TIME) {
+        let message = '';
+        switch (role) {
+          case 'pos1':
+            message = `You died at ${mins} minutes. This is slowing your farming timings. Play defensively near tower and ask supports to stack.`;
+            break;
+          case 'mid':
+            message = `You died at ${mins} minutes. You are feeding the enemy mid momentum. Control aggression and watch your highground positioning.`;
+            break;
+          case 'pos3':
+            message = `You died at ${mins} minutes. Don't let the enemy carry free farm. Focus on pulling the wave or holding it near your tower.`;
+            break;
+          case 'pos4':
+            message = `You died at ${mins} minutes. Avoid dying for free in offlane. Ensure your presence creates space or trades for enemy carry HP.`;
+            break;
+          case 'pos5':
+            message = `You died at ${mins} minutes. Watch your positioning in safelane. Trade from trees, keep your carry safe, and avoid feeding.`;
+            break;
+        }
         recs.push({
           priority: 'high',
           category: 'death',
-          message: `You died at ${mins} minutes. ${this.deathCount} deaths in laning. ${isSupport ? 'Watch your positioning and keep your distance.' : 'Be more careful with positioning.'}`,
+          message,
           cooldownKey: `death_${this.deathCount}`,
           cooldownSeconds: 30,
         });
       } else if (this.deathCount >= MANY_DEATHS_THRESHOLD) {
+        let message = '';
+        switch (role) {
+          case 'pos1':
+            message = `${this.deathCount} deaths. Stop fighting. Stay off the map, farm safely in the triangle, and do not show yourself alone.`;
+            break;
+          case 'mid':
+            message = `${this.deathCount} deaths. You need to play defensively. Avoid solo rotations. Stick behind your offlane initiator.`;
+            break;
+          case 'pos3':
+            message = `${this.deathCount} deaths. Stop feeding. Shift to aura items, stay with your team, and play for counter-initiations.`;
+            break;
+          case 'pos4':
+            message = `${this.deathCount} deaths. Play safer behind trees. Do not walk into un-warded enemy territory alone.`;
+            break;
+          case 'pos5':
+            message = `${this.deathCount} deaths. Stop feeding. Play far back, buy defensive saves, and only die to secure your carry's life.`;
+            break;
+        }
         recs.push({
           priority: 'critical',
           category: 'death',
-          message: `${this.deathCount} deaths. ${isSupport ? 'Stop feeding. Play safer, stay behind cores, and buy defensive items.' : 'Focus on farming safely and avoid solo plays until you have a key item.'}`,
+          message,
           cooldownKey: 'death_many',
           cooldownSeconds: 60,
         });
       }
     }
 
-    // --- Low HP warning ---
+    // --- Low HP warning (role specific) ---
     if (snap.hero.alive && snap.hero.healthPercent > 0 && snap.hero.healthPercent < LOW_HP_THRESHOLD) {
+      let message = '';
+      switch (role) {
+        case 'pos1':
+          message = 'Low health. Back off immediately to tower, use a salve or retreat to jungle. Do not risk giving away kill bounty.';
+          break;
+        case 'mid':
+          message = 'Low health. Back off, bottle a rune, or base. You cannot contest mid lane with low HP.';
+          break;
+        case 'pos3':
+          message = 'Low health. Retreat to tower or use regen. You must stay healthy to pressure the lane.';
+          break;
+        case 'pos4':
+        case 'pos5':
+          message = 'Low health. Keep your distance, stay in the backlines, and heal up. Your life is needed to save cores.';
+          break;
+      }
       recs.push({
         priority: 'high',
         category: 'positioning',
-        message: isSupport ? 'Low health. Back off and heal up. Your life matters for saving cores.' : 'Low health. Back off or use a salve.',
+        message,
         cooldownKey: 'low_hp',
         cooldownSeconds: 15,
       });
     }
 
-    // --- Low mana warning ---
+    // --- Low mana warning (role specific) ---
     if (snap.hero.alive && snap.hero.manaPercent > 0 && snap.hero.manaPercent < LOW_MANA_THRESHOLD && snap.hero.level >= LOW_MANA_MIN_LEVEL) {
+      let message = '';
+      switch (role) {
+        case 'pos1':
+          message = 'Low mana. Use a clarity or shrine. You need mana for farming spells or escape abilities.';
+          break;
+        case 'mid':
+          message = 'Low mana. Use bottle, clarity, or grab a rune. You need mana to threaten the lane and secure CS.';
+          break;
+        case 'pos3':
+          message = 'Low mana. Ferry a clarity. You need mana to cast your stun or crowd control spells.';
+          break;
+        case 'pos4':
+        case 'pos5':
+          message = 'Low mana. Use clarity or shrine. Your spells are critical to peel or secure kills in skirmishes.';
+          break;
+      }
       recs.push({
         priority: 'medium',
         category: 'mana',
-        message: isSupport ? 'Low mana. Use clarity or shrine. Your spells are critical for fights.' : 'Low mana. Use bottle or clarity.',
+        message,
         cooldownKey: 'low_mana',
         cooldownSeconds: 20,
       });
     }
 
-    // --- Last hits benchmark (core roles) ---
+    // --- Last hits benchmark (core roles - role specific) ---
     if (!isSupport && snap.phase === 'laning' && t > 0) {
       const mins = t / 60;
       const lhPerMin = snap.player.lastHits / Math.max(mins, 1);
       if (mins >= LH_BENCHMARK_MIN_MINUTES && lhPerMin < LH_PER_MIN_TARGET) {
+        let message = '';
+        if (role === 'pos1') {
+          message = `Your last hits are low for a Carry. Only ${snap.player.lastHits} in ${Math.floor(mins)} minutes. Focus on creep lane control.`;
+        } else if (role === 'mid') {
+          message = `Your last hits are low for Mid. ${snap.player.lastHits} in ${Math.floor(mins)} minutes. Focus on securing creeps and denies.`;
+        } else { // pos3
+          message = `Your last hits are low. ${snap.player.lastHits} in ${Math.floor(mins)} minutes. Secure the lane and pull hard camp if needed.`;
+        }
         recs.push({
           priority: 'medium',
           category: 'farming',
-          message: `Your last hits are low. ${snap.player.lastHits} in ${Math.floor(mins)} minutes. Focus on getting every creep.`,
+          message,
           cooldownKey: 'lh_low',
           cooldownSeconds: 120,
         });
@@ -355,7 +493,7 @@ export class CoachingEngine {
 
     // === Support-specific rules ===
     if (isSupport) {
-      const isPos5 = snap.role === 'pos5';
+      const isPos5 = role === 'pos5';
 
       // Ward check — remind to place if carrying wards
       const hasObs = snap.items.some(i => i.itemName.includes('ward_observer') || i.itemName.includes('ward_dispenser'));

@@ -131,8 +131,8 @@ export class StratzClient {
   /**
    * Fetch pro player's recent matches on specific heroes.
    */
-  async fetchProMatches(heroIds: number[], take: number = 25): Promise<any> {
-    return this.fetchPlayerMatches(PRO_STEAM_ID, heroIds, take);
+  async fetchProMatches(steamAccountId: number, heroIds: number[], take: number = 25): Promise<any> {
+    return this.fetchPlayerMatches(steamAccountId, heroIds, take);
   }
 
   /**

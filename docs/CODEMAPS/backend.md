@@ -55,13 +55,13 @@ The HTTP server listens for Dota 2 Game State Integration telemetry payload post
 ```
 
 ### Key Modules
-- **General Role Rules** (`generalRoleRules`): Position-aware coaching branch:
-  - **Mid**: Rune control, gank awareness, level 6 spike.
-  - **Pos 1**: Farming efficiency, last-hit benchmarks, safe farming patterns.
-  - **Pos 3**: Lane bullying, blink initiation timing, aura item management.
-  - **Pos 4**: Roaming timings, smoke ganks, ward deep wards.
-  - **Pos 5**: Ward/stack discipline (:53–:55), save ability tracking, smoke purchases, lane sustain.
-  - *All positions*: Phase transition reminders, death feedback, tower defense calls.
+- **General Role Rules** (`generalRoleRules`): Position-aware and lane-specific coaching branch:
+  - **Pos 1 (Safelane Carry)**: Protects life, prioritizes farming patterns (jungle/triangle), monitors lane equilibrium, and optimizes items to avoid feed bounty.
+  - **Pos 2 (Mid)**: Focuses on Water/Power runes, pushing wave prior to spawn, side-lane active rotations, and fight backline jumps.
+  - **Pos 3 (Offlane)**: Denies enemy safelaner healing (lotus), blocks camps, builds frontline aura items, and prioritizes Blink initiations.
+  - **Pos 4 (Soft Support)**: Roams to secure mid runes, pressures offlane, and coordinates smoke ganks.
+  - **Pos 5 (Hard Support)**: Pulls/stacks (:53-:55), secures lotus pools, prioritizes backline defensive saves, and protects the carry.
+  - *All positions*: Lane-aware phase transitions (10m/25m), death feedback, tower defense calls, and low HP/mana alerts.
 - **Creep Score Checkpoints**: Compares the player's last hits at 10, 20, and 30 minutes against estimated averages calculated from pro match data. Role-appropriate thresholds (cores get LH comparisons, supports get less strict).
 - **Pro Item Timing Advice**: Compares player inventory against median timings of pro-level itemizations.
   - **Dynamic Branching**: Detects player trajectories (Magical or Physical) by scanning for item components (e.g., Kaya vs. Desolator). Once a build path is detected, the engine disables recommendations from the opposing branch to keep timings clean and relevant. Currently active for **mid** and **pos1** roles.

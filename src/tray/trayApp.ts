@@ -17,14 +17,14 @@ function volumeBar(vol: number): string {
 }
 
 const POSITION_LABELS: Record<Role, string> = {
-  mid: 'Mid',
   pos1: 'Safe Lane (Pos 1)',
+  mid: 'Mid Lane (Pos 2)',
   pos3: 'Off Lane (Pos 3)',
   pos4: 'Soft Support (Pos 4)',
   pos5: 'Hard Support (Pos 5)',
 };
 
-const POSITION_ORDER: Role[] = ['mid', 'pos1', 'pos3', 'pos4', 'pos5'];
+const POSITION_ORDER: Role[] = ['pos1', 'mid', 'pos3', 'pos4', 'pos5'];
 
 export interface TrayCallbacks {
   onToggleHero: (heroId: number) => void;
@@ -113,11 +113,11 @@ export class TrayApp {
       // 16: separator
       // 17: quit
 
-      const posStart = 1;
+      const posStart = 2;
       const posEnd = posStart + POSITION_ORDER.length - 1;
 
-      if (idx >= 2 && idx <= posEnd) {
-        const role = POSITION_ORDER[idx - 2];
+      if (idx >= posStart && idx <= posEnd) {
+        const role = POSITION_ORDER[idx - posStart];
         this.callbacks.onSetPosition(role);
         return;
       }

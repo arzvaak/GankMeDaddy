@@ -40,7 +40,7 @@ The menu has a fixed 18-item layout (no dynamic hero items):
 |---|---|---|
 | 0 | `Status: ...` | Disabled label |
 | 1 | `Position: <role>` | Disabled label |
-| 2–6 | Position radio buttons (mid, pos1, pos3, pos4, pos5) | Clickable radio |
+| 2–6 | Position radio buttons (pos1, mid, pos3, pos4, pos5) | Clickable radio |
 | 7 | Separator | Disabled |
 | 8 | Voice ON/OFF | Toggle |
 | 9 | Aggression: X/10 | Disabled label |
@@ -60,11 +60,11 @@ The helper `volumeBar(vol: number)` converts a 0–100 value into a 10-segment U
 ### Position Constants
 
 ```typescript
-const POSITION_ORDER: Role[] = ['mid', 'pos1', 'pos3', 'pos4', 'pos5'];
+const POSITION_ORDER: Role[] = ['pos1', 'mid', 'pos3', 'pos4', 'pos5'];
 
 const POSITION_LABELS: Record<Role, string> = {
-  mid: 'Mid',
   pos1: 'Safe Lane (Pos 1)',
+  mid: 'Mid Lane (Pos 2)',
   pos3: 'Offlane (Pos 3)',
   pos4: 'Soft Support (Pos 4)',
   pos5: 'Hard Support (Pos 5)',

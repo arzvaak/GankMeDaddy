@@ -32,6 +32,7 @@ export class MatchTracker extends EventEmitter {
   private currentHeroId: number = 0;
   private stratzContext: StratzContext | null = null;
   private lastSnapshot: MatchSnapshot | null = null;
+  private currentRole: Role | null = null;
 
   constructor(
     gsi: GSIServer,
@@ -108,6 +109,7 @@ export class MatchTracker extends EventEmitter {
       this.currentHeroId = 0;
       this.stratzContext = null;
       this.lastSnapshot = null;
+      this.currentRole = null;
       this.emit('matchEnd');
     });
 
@@ -123,6 +125,16 @@ export class MatchTracker extends EventEmitter {
         await this.loadStratzContext(this.currentHeroId);
       }
 
+      // Detect role change
+      if (this.currentHeroId) {
+        const role: Role = this.config.get().position || HERO_ROLES[state.hero?.id || this.currentHeroId] || 'mid';
+        if (role !== this.currentRole) {
+          this.loadStratzContext(this.currentHeroId, role).catch(err => {
+            console.error('[TRACKER] Failed to load role-aware STRATZ context:', err);
+          });
+        }
+      }
+
       // Build snapshot
       const snapshot = this.buildSnapshot(state);
       if (snapshot) {
@@ -132,25 +144,34 @@ export class MatchTracker extends EventEmitter {
     });
   }
 
-  private async loadStratzContext(heroId: number): Promise<void> {
+  private async loadStratzContext(heroId: number, role?: Role): Promise<void> {
     if (!heroId || heroId <= 0) {
       this.stratzContext = {
         proProfile: null,
         userRecentMatches: 0,
         userWinRate: null,
       };
+      this.currentRole = null;
       return;
     }
 
-    console.log(`[TRACKER] Loading STRATZ context for hero ${heroId}...`);
+    const userConfig = this.config.get();
+    const activeRole = role || userConfig.position || HERO_ROLES[heroId] || 'mid';
 
-    const proProfile = await this.pro.analyzeHero(heroId);
+    // If already loading/loaded this hero + role, skip
+    if (this.stratzContext?.proProfile?.heroId === heroId && this.currentRole === activeRole) {
+      return;
+    }
+
+    this.currentRole = activeRole;
+    console.log(`[TRACKER] Loading STRATZ context for hero ${heroId} (Role: ${activeRole})...`);
+
+    const proProfile = await this.pro.analyzeHero(heroId, activeRole);
 
     // Fetch user's own recent matches on this hero
     let userRecentMatches = 0;
     let userWinRate: number | null = null;
     try {
-      const userConfig = this.config.get();
       const userMatches = await this.stratz.fetchPlayerMatches(
         userConfig.steamAccountId,
         [heroId],
@@ -170,8 +191,8 @@ export class MatchTracker extends EventEmitter {
     }
 
     // Prevent stale async STRATZ context from overwriting the current hero context
-    if (this.currentHeroId !== heroId) {
-      console.log(`[TRACKER] Discarded stale STRATZ context for hero ${heroId} (current hero is ${this.currentHeroId})`);
+    if (this.currentHeroId !== heroId || this.currentRole !== activeRole) {
+      console.log(`[TRACKER] Discarded stale STRATZ context for hero ${heroId} (current hero is ${this.currentHeroId}, role is ${this.currentRole})`);
       return;
     }
 

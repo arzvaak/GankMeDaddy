@@ -100,6 +100,14 @@ for (const h of DOTA_HEROES) {
 
 export const SUPPORTED_HERO_IDS = Object.values(HERO_IDS) as number[];
 
+export const ROLE_PRO_PLAYERS: Record<Role, number> = {
+  pos1: 321580662,
+  mid: 94054712,
+  pos3: 302214028,
+  pos4: 157475523,
+  pos5: 113331514,
+};
+
 // ---------------------------------------------------------------------------
 // Pro player reference data (fetched from STRATZ)
 // ---------------------------------------------------------------------------
